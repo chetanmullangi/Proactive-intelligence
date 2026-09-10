@@ -1,0 +1,21 @@
+metric_batch: medical_claim_billed_amount
+db: snowflake
+ingest_sql: metrics/medical_claim_billed_amount/medical_claim_billed_amount.sql
+ingest_cron: "0 6 * * 1"
+train_cron: "0 7 * * 1"
+score_cron: "0 8 * * 1"
+alert_cron: "0 8 * * 1"
+forecast_horizon: 4
+thresholds:
+  warn_lower: 236448
+  warn_upper: 1260316
+  crit_lower: 151126
+  crit_upper: 1345639
+directionality: both         # assumption — confirm with business owner
+kpi_class: null
+notes: >
+  Historical spike week 2026-05-04 (robust z ~4.1) driven by high-cost claims,
+  not volume — see attribution in reports/HEALTH_CARE/. Reconciles against
+  medical_claim_line at 97.9% (join key CLAIM_ID); dup_rate on source table
+  is 0.45%. Strong monthly growth trend (r2=0.72) underneath native-grain
+  volatility.

@@ -1,0 +1,20 @@
+metric_batch: pharmacy_claim_count
+db: snowflake
+ingest_sql: metrics/pharmacy_claim_count/pharmacy_claim_count.sql
+ingest_cron: "0 6 * * 1"
+train_cron: "0 7 * * 1"
+score_cron: "0 8 * * 1"
+alert_cron: "0 8 * * 1"
+forecast_horizon: 4
+thresholds:
+  warn_lower: 527.36
+  warn_upper: 589.64
+  crit_lower: 522.17
+  crit_upper: 594.83
+directionality: both         # assumption — confirm with business owner
+kpi_class: null
+notes: >
+  WARN at last full-week observation (592, just above warn_upper). Mild real
+  uptrend (native r2=0.20, month r2=0.62) — table's data is stale 69 days
+  vs. wall-clock, so treat the "current" reading as a snapshot from 2026-06-22,
+  not literally today.

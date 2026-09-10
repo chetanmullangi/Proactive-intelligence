@@ -1,0 +1,20 @@
+metric_batch: fact_claim_payment_count
+db: snowflake
+ingest_sql: metrics/fact_claim_payment_count/fact_claim_payment_count.sql
+ingest_cron: "0 6 * * 1"    # weekly, matches native grain
+train_cron: "0 7 * * 1"
+score_cron: "0 8 * * 1"
+alert_cron: "0 8 * * 1"
+forecast_horizon: 4          # buckets ahead (weeks), from Phase 3
+thresholds:
+  warn_lower: 114.77
+  warn_upper: 417.23
+  crit_lower: 89.56
+  crit_upper: 442.44
+directionality: low_bad      # assumption — confirm with business owner
+kpi_class: null
+notes: >
+  CRITICAL at last full-week observation (88 vs crit_lower 89.56).
+  Native-grain trend is falling (r2=0.70) but month/year-grain trends over the
+  full history are rising (month r2=0.45, year r2=0.37) — this is a reversal of
+  a 6-year growth trend, not noise. See reports/HEALTH_CARE/ for full analysis.

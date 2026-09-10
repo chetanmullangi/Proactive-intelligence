@@ -1,0 +1,281 @@
+{
+  "database": "HEALTH_CARE",
+  "generated_at": "2026-09-10T02:10:00-07:00",
+  "lookback_days": 90,
+  "kpis": [
+    {
+      "kpi_id": "main.medical_claim_header.count_star",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_HEADER",
+      "measure_column": "*", "aggregation": "COUNT",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.78, "score_rationale": "Core claim-volume KPI on the largest header table; native-grain r2=0.05 (flat), but month-grain r2=0.83 shows strong real growth over the full history.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 1.96, "trend_flag": "flat",
+      "days_stale": 72, "span_days": 2372, "month_slope": 12.584, "month_r2": 0.8307, "year_slope": 690.79, "year_r2": 0.1455, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.medical_claim_header.sum_total_billed_amount",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_HEADER",
+      "measure_column": "TOTAL_BILLED_AMOUNT", "aggregation": "SUM",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.85, "score_rationale": "Primary cost KPI; native-grain has one extreme spike week (robust z ~4.1 at 2026-05-04); month-grain r2=0.72 confirms real long-run growth underneath.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, SUM(TOTAL_BILLED_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, SUM(TOTAL_BILLED_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, SUM(TOTAL_BILLED_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, SUM(TOTAL_BILLED_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 10.72, "trend_flag": "volatile",
+      "days_stale": 72, "span_days": 2372, "month_slope": 32910.65, "month_r2": 0.7249, "year_slope": 2308973.01, "year_r2": 0.2935, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.medical_claim_header.sum_total_allowed_amount",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_HEADER",
+      "measure_column": "TOTAL_ALLOWED_AMOUNT", "aggregation": "SUM",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.75, "score_rationale": "Same spike pattern as billed amount (robust z ~9.8 at 2026-05-04); month-grain r2=0.73 shows real long-run growth.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, SUM(TOTAL_ALLOWED_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, SUM(TOTAL_ALLOWED_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, SUM(TOTAL_ALLOWED_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, SUM(TOTAL_ALLOWED_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 1.73, "trend_flag": "volatile",
+      "days_stale": 72, "span_days": 2372, "month_slope": 14919.54, "month_r2": 0.7295, "year_slope": 1091269.70, "year_r2": 0.3172, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.medical_claim_header.sum_total_plan_paid_amount",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_HEADER",
+      "measure_column": "TOTAL_PLAN_PAID_AMOUNT", "aggregation": "SUM",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.75, "score_rationale": "Same spike pattern (robust z ~13.0 at 2026-05-04); month-grain r2=0.72 shows real long-run growth.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, SUM(TOTAL_PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, SUM(TOTAL_PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, SUM(TOTAL_PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, SUM(TOTAL_PLAN_PAID_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 4.71, "trend_flag": "volatile",
+      "days_stale": 72, "span_days": 2372, "month_slope": 12916.33, "month_r2": 0.7198, "year_slope": 940702.86, "year_r2": 0.3158, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.medical_claim_header.avg_is_denied",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_HEADER",
+      "measure_column": "IS_DENIED (derived: CLAIM_STATUS='DENIED')", "aggregation": "AVG",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered", "kpi_class": "error_rate",
+      "score": 0.88, "score_rationale": "Denial rate: flat at native (r2~0) and monthly (r2=0.10) grain, but a strong, real INCREASE year-over-year (r2=0.83) with no month-of-year seasonality to explain it away (checked: range 0.110-0.125 across all 12 calendar months, no cycle). A multi-year creep invisible at short grains.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, AVG(IFF(CLAIM_STATUS='DENIED',1,0)) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, AVG(IFF(CLAIM_STATUS='DENIED',1,0)) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, AVG(IFF(CLAIM_STATUS='DENIED',1,0)) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, AVG(IFF(CLAIM_STATUS='DENIED',1,0)) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": -0.28, "trend_flag": "flat",
+      "days_stale": 72, "span_days": 2372, "month_slope": 0.0001536, "month_r2": 0.0977, "year_slope": 0.0017876, "year_r2": 0.8261, "month_of_year_seasonal": false, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.medical_claim_line.count_star",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_LINE",
+      "measure_column": "*", "aggregation": "COUNT",
+      "date_column": "SERVICE_FROM_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.72, "score_rationale": "Line-level volume; r=0.972 with header claim count; month-grain r2=0.82 confirms real long-run growth.",
+      "usage_label": "cold", "distinct_queries": 4, "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_FROM_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE) SELECT DATE_TRUNC('week', SERVICE_FROM_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE, bounds WHERE SERVICE_FROM_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_FROM_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE;",
+      "history_span_sql": "SELECT MIN(SERVICE_FROM_DATE) AS min_dt, MAX(SERVICE_FROM_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_FROM_DATE), MAX(SERVICE_FROM_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_FROM_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_FROM_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_FROM_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 1.79, "trend_flag": "flat",
+      "days_stale": 72, "span_days": 2372, "month_slope": 36.63, "month_r2": 0.8237, "year_slope": 2067.57, "year_r2": 0.1610, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.medical_claim_line.sum_plan_paid_amount",
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_LINE",
+      "measure_column": "PLAN_PAID_AMOUNT", "aggregation": "SUM",
+      "date_column": "SERVICE_FROM_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.74, "score_rationale": "r=0.941 with header billed amount; same 2026-05-04 spike; month-grain r2=0.72 confirms real long-run growth.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_FROM_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE) SELECT DATE_TRUNC('week', SERVICE_FROM_DATE) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE, bounds WHERE SERVICE_FROM_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_FROM_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE;",
+      "history_span_sql": "SELECT MIN(SERVICE_FROM_DATE) AS min_dt, MAX(SERVICE_FROM_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_FROM_DATE), MAX(SERVICE_FROM_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_FROM_DATE) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_FROM_DATE) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_FROM_DATE) AS grp, SUM(PLAN_PAID_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 4.41, "trend_flag": "volatile",
+      "days_stale": 72, "span_days": 2372, "month_slope": 13199.96, "month_r2": 0.7246, "year_slope": 967185.98, "year_r2": 0.3162, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.fact_encounter.count_star",
+      "schema": "MAIN", "table": "FACT_ENCOUNTER",
+      "measure_column": "*", "aggregation": "COUNT",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.7, "score_rationale": "r=0.984 with claim count; month-grain r2=0.84, the strongest monthly fit in the database.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 1.73, "trend_flag": "flat",
+      "days_stale": 72, "span_days": 2372, "month_slope": 9.867, "month_r2": 0.8404, "year_slope": 533.75, "year_r2": 0.1400, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.fact_encounter.avg_length_of_stay_days",
+      "schema": "MAIN", "table": "FACT_ENCOUNTER",
+      "measure_column": "LENGTH_OF_STAY_DAYS", "aggregation": "AVG",
+      "date_column": "SERVICE_START_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.4, "score_rationale": "Highest native-grain CV (0.62); ALSO no real signal at month (r2=0.006) or year (r2=0.098) grain — confirms this is just noise at every timescale, not merely a native-grain artifact. Lowered priority vs. the earlier run given this multi-grain confirmation.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, AVG(LENGTH_OF_STAY_DAYS) AS value FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, AVG(LENGTH_OF_STAY_DAYS) AS value FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, AVG(LENGTH_OF_STAY_DAYS) AS value FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, AVG(LENGTH_OF_STAY_DAYS) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_ENCOUNTER GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 14.5, "trend_flag": "volatile",
+      "days_stale": 72, "span_days": 2372, "month_slope": 0.0001184, "month_r2": 0.0061, "year_slope": 0.0014331, "year_r2": 0.0979, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.fact_claim_payment.sum_paid_amount",
+      "schema": "MAIN", "table": "FACT_CLAIM_PAYMENT",
+      "measure_column": "PAID_AMOUNT", "aggregation": "SUM",
+      "date_column": "PAYMENT_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.95, "score_rationale": "IMPORTANT DIVERGENCE: native-grain (90-day) shows a real DECLINE (r2=0.39, slope negative), but month-grain (r2=0.54) and year-grain (r2=0.60) over the full history both show real GROWTH (slopes positive). The recent decline bucks a 6-year growth trend — more concerning than either number alone, not less.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(PAYMENT_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT) SELECT DATE_TRUNC('week', PAYMENT_DATE) AS bucket, SUM(PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT, bounds WHERE PAYMENT_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(PAYMENT_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT;",
+      "history_span_sql": "SELECT MIN(PAYMENT_DATE) AS min_dt, MAX(PAYMENT_DATE) AS max_dt, DATEDIFF(day, MIN(PAYMENT_DATE), MAX(PAYMENT_DATE)) AS span_days FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', PAYMENT_DATE) AS bucket, SUM(PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', PAYMENT_DATE) AS bucket, SUM(PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(PAYMENT_DATE) AS grp, SUM(PAID_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT GROUP BY 1;",
+      "buckets_available": 13, "pct_change_recent": -32.6, "trend_flag": "falling",
+      "days_stale": 9, "span_days": 2415, "month_slope": 11898.71, "month_r2": 0.5433, "year_slope": 1283871.57, "year_r2": 0.6039, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.fact_claim_payment.count_star",
+      "schema": "MAIN", "table": "FACT_CLAIM_PAYMENT",
+      "measure_column": "*", "aggregation": "COUNT",
+      "date_column": "PAYMENT_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.97, "score_rationale": "TOP FINDING, confirmed by multi-grain: native-grain r2=0.70 DECLINE over the last 13 weeks, while month-grain (r2=0.45) and year-grain (r2=0.37) over the full 6+ year history both show real GROWTH. This is a genuine recent reversal against a long-standing upward trend, not just noise reverting to a stable mean — the strongest anomaly signal in this database.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(PAYMENT_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT) SELECT DATE_TRUNC('week', PAYMENT_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT, bounds WHERE PAYMENT_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(PAYMENT_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT;",
+      "history_span_sql": "SELECT MIN(PAYMENT_DATE) AS min_dt, MAX(PAYMENT_DATE) AS max_dt, DATEDIFF(day, MIN(PAYMENT_DATE), MAX(PAYMENT_DATE)) AS span_days FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', PAYMENT_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', PAYMENT_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(PAYMENT_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT GROUP BY 1;",
+      "buckets_available": 13, "pct_change_recent": -33.6, "trend_flag": "falling",
+      "days_stale": 9, "span_days": 2415, "month_slope": 8.965, "month_r2": 0.4498, "year_slope": 860.43, "year_r2": 0.3727, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.pharmacy_claim.count_star",
+      "schema": "MAIN", "table": "PHARMACY_CLAIM",
+      "measure_column": "*", "aggregation": "COUNT",
+      "date_column": "FILL_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.6, "score_rationale": "Mild real native-grain uptrend (r2=0.20); month-grain r2=0.62 confirms consistent real growth, year-grain weaker (r2=0.18, only 7 noisy year-buckets).",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(FILL_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM) SELECT DATE_TRUNC('week', FILL_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM, bounds WHERE FILL_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(FILL_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM;",
+      "history_span_sql": "SELECT MIN(FILL_DATE) AS min_dt, MAX(FILL_DATE) AS max_dt, DATEDIFF(day, MIN(FILL_DATE), MAX(FILL_DATE)) AS span_days FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', FILL_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', FILL_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(FILL_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 2.09, "trend_flag": "rising",
+      "days_stale": 69, "span_days": 2375, "month_slope": 15.618, "month_r2": 0.6177, "year_slope": 1005.25, "year_r2": 0.1786, "grains_tested": ["native","month","year"]
+    },
+    {
+      "kpi_id": "main.pharmacy_claim.sum_plan_paid_amount",
+      "schema": "MAIN", "table": "PHARMACY_CLAIM",
+      "measure_column": "PLAN_PAID_AMOUNT", "aggregation": "SUM",
+      "date_column": "FILL_DATE", "grain": "week",
+      "source": "discovered",
+      "score": 0.5, "score_rationale": "Noisiest native-grain KPI (CV=0.28, r2=0.05); month-grain r2=0.32 (moderate) confirms some real growth underneath, weaker than script count's monthly fit.",
+      "usage_label": "cold", "distinct_queries": 0, "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(FILL_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM) SELECT DATE_TRUNC('week', FILL_DATE) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM, bounds WHERE FILL_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(FILL_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM;",
+      "history_span_sql": "SELECT MIN(FILL_DATE) AS min_dt, MAX(FILL_DATE) AS max_dt, DATEDIFF(day, MIN(FILL_DATE), MAX(FILL_DATE)) AS span_days FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', FILL_DATE) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', FILL_DATE) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(FILL_DATE) AS grp, SUM(PLAN_PAID_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.PHARMACY_CLAIM GROUP BY 1;",
+      "buckets_available": 14, "pct_change_recent": 7.21, "trend_flag": "volatile",
+      "days_stale": 69, "span_days": 2375, "month_slope": 2777.49, "month_r2": 0.3211, "year_slope": 154744.62, "year_r2": 0.0887, "grains_tested": ["native","month","year"]
+    }
+  ],
+  "table_usage_series": [
+    {
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_HEADER", "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN", "table": "MEDICAL_CLAIM_LINE", "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN", "table": "FACT_ENCOUNTER", "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.FACT_ENCOUNTER' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN", "table": "FACT_CLAIM_PAYMENT", "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN", "table": "PHARMACY_CLAIM", "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.PHARMACY_CLAIM' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    }
+  ],
+  "correlations": [
+    {
+      "kpi_a": "main.medical_claim_header.sum_total_plan_paid_amount", "kpi_b": "main.medical_claim_line.sum_plan_paid_amount",
+      "r": 0.9998, "n_overlap": 14, "type": "kpi_to_kpi", "shared_dimension": "MAIN schema, CLAIM_ID — same measure (plan-paid amount) at two aggregation levels: header total vs. sum of that claim's lines. Genuine reconciliation pair. n_overlap=14 passes the >=8 validity gate.",
+      "join_key": "CLAIM_ID"
+    },
+    {
+      "kpi_a": "main.medical_claim_header.count_star", "kpi_b": "main.fact_encounter.count_star",
+      "r": 0.984, "n_overlap": 14, "type": "kpi_to_kpi", "shared_dimension": "MAIN schema, MEMBER_ID — related but distinct real-world events (claims vs. encounters); correlated, not a reconciliation pair. n_overlap=14 passes the validity gate.",
+      "join_key": null
+    },
+    {
+      "kpi_a": "main.medical_claim_header.count_star", "kpi_b": "main.medical_claim_line.count_star",
+      "r": 0.972, "n_overlap": 14, "type": "kpi_to_kpi", "shared_dimension": "MAIN schema, CLAIM_ID — one claim has many lines, so counts are structurally correlated but not equal; not a reconciliation pair. n_overlap=14 passes the validity gate.",
+      "join_key": null
+    },
+    {
+      "kpi_a": "main.medical_claim_header.sum_total_billed_amount", "kpi_b": "main.medical_claim_line.sum_plan_paid_amount",
+      "r": 0.941, "n_overlap": 14, "type": "kpi_to_kpi", "shared_dimension": "MAIN schema, CLAIM_ID — different measures (billed vs. plan-paid), correlated but not the same quantity; not a reconciliation pair. n_overlap=14 passes the validity gate.",
+      "join_key": null
+    }
+  ],
+  "skipped": [
+    {"object": "main.mart_member_year_summary.*", "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."},
+    {"object": "main.mart_provider_year_summary.*", "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."},
+    {"object": "main.mart_pharmacy_class_year.*", "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."},
+    {"object": "main.mart_utilization_per_1000.*", "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."},
+    {"object": "main.fact_premium.*", "reason": "Monthly grain (COVERAGE_MONTH); own-max-anchored 90-day window yields only ~3 buckets, below viability bar."},
+    {"object": "main.fact_member_month.*", "reason": "Monthly grain (MONTH_START_DATE); own-max-anchored 90-day window yields only ~3 buckets, below viability bar."},
+    {"object": "main.mart_pmpm_plan_month.*", "reason": "Monthly grain (YEAR_MONTH text, not a date type); would need casting and still yields too few 90-day buckets."}
+  ]
+}

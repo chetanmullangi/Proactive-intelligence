@@ -1,0 +1,19 @@
+metric_batch: fact_claim_payment_paid_amount
+db: snowflake
+ingest_sql: metrics/fact_claim_payment_paid_amount/fact_claim_payment_paid_amount.sql
+ingest_cron: "0 6 * * 1"
+train_cron: "0 7 * * 1"
+score_cron: "0 8 * * 1"
+alert_cron: "0 8 * * 1"
+forecast_horizon: 4
+thresholds:
+  warn_lower: 0
+  warn_upper: 497459
+  crit_lower: 0
+  crit_upper: 540223
+directionality: low_bad      # assumption — confirm with business owner
+kpi_class: null
+notes: >
+  Falling trend (native r2=0.39) tracking fact_claim_payment.count_star's
+  decline. Same month/year-grain reversal pattern applies. Static bounds are a
+  weak fit for a trending series — EWMA recommended over these fixed bounds.

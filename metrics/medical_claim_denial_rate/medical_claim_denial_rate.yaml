@@ -1,0 +1,20 @@
+metric_batch: medical_claim_denial_rate
+db: snowflake
+ingest_sql: metrics/medical_claim_denial_rate/medical_claim_denial_rate.sql
+ingest_cron: "0 6 * * 1"
+train_cron: "0 7 * * 1"
+score_cron: "0 8 * * 1"
+alert_cron: "0 8 * * 1"
+forecast_horizon: 4
+thresholds:
+  warn_lower: 0.063089
+  warn_upper: 0.187551
+  crit_lower: 0.052716
+  crit_upper: 0.197923
+directionality: high_bad
+kpi_class: error_rate
+notes: >
+  Always-watch KPI (kpi_class=error_rate) regardless of threshold status.
+  Flat week-to-week and month-to-month, but a real, non-seasonal upward creep
+  year-over-year (year r2=0.83) — worth a standing dashboard watch even though
+  native-grain bounds aren't currently tripped.
