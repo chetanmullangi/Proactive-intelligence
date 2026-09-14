@@ -5,12 +5,21 @@
 // a recommended action), the field is simply absent rather than invented.
 // See web/README.md for the mapping from the original design's mock shape.
 
-export const generatedAt = '2026-09-10T04:57:11.918Z'
+export const generatedAt = '2026-09-11T07:15:00.000Z'
+// Refreshed against KPI_CURRENT_STATE/KPI_BASELINE run_ts 2026-09-10T04:56:39–
+// 2026-09-11T00:03:34 and the profiler's business-dimension-breakdown backfill
+// (8 of 15 KPIs now have a real business_reason, not a statistical restatement).
+// Added the 2 KPIs the profiler's full-database rescan discovered this session
+// (dim_provider, bridge_provider_network) that the earlier hand-picked-table
+// scope had missed.
 
 export const kpis = [
   {
     id: 'header-count',
     kpiId: 'main.medical_claim_header.count_star',
+    plainStatus: 'Normal',
+    plainReason: 'Claim volume is holding steady. There\'s been a small uptick in first-time claims recently, but it\'s a minor shift — nothing that looks unusual.',
+    plainConfidence: 'We\'re confident in this reading.',
     name: 'Claims Submitted',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER',
@@ -31,7 +40,12 @@ export const kpis = [
       { toId: 'line-count', name: 'Claim Lines Submitted', r: 0.972, nOverlap: 14, joinKey: null, note: 'Structural: one claim has many lines, so counts track but are not equal.' },
     ],
     reasons: [
-      { rank: 1, text: 'Stable — no dedicated investigation triggered', strength: 'moderate', evidence: 'Current value at ~86th percentile of baseline (robust z=2.02, inside warn); native trend flat (r²=0.05) though month-grain shows real growth (r²=0.83) — long-run growth, not a native-grain anomaly.', method: 'Baseline statistics (Phase 1) + threshold comparison (Phase 3). Classified stable/medium-confidence, so no deeper attribution pass was run.' },
+      {
+        rank: 1, text: 'Small net change is concentrated in ORIGINAL claims — organic drift, not an anomaly', strength: 'strong',
+        evidence: 'Claim volume is stable overall (native r²=0.05); the modest net change that exists (+140 claims over 8 weeks, ~5% of typical weekly volume) is concentrated in ORIGINAL claims (+129). Flagged "strong" by the same-category-explains-most-of-the-change rule, but the underlying magnitude is small enough that it isn’t worth acting on by itself.',
+        segment: 'CLAIM_TYPE via MEDICAL_CLAIM_HEADER',
+        method: 'Business-dimension breakdown: CLAIM_TYPE split, equal 4-vs-4 week windows.',
+      },
     ],
     series: [
       { bucket: '2026-03-30', value: 300, partial: true }, { bucket: '2026-04-06', value: 372 }, { bucket: '2026-04-13', value: 367 },
@@ -46,6 +60,9 @@ export const kpis = [
   {
     id: 'header-billed',
     kpiId: 'main.medical_claim_header.sum_total_billed_amount',
+    plainStatus: 'Normal',
+    plainReason: 'Total billed amounts are steady. There was a one-time spike a few months back from a handful of unusually large claims, but the recent picture is stable — no single type of claim is driving a change right now.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Total Billed Amount',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER',
@@ -66,9 +83,16 @@ export const kpis = [
     ],
     reasons: [
       {
-        rank: 1, text: 'A handful of unusually high-cost claims landed the week of 2026-05-04', strength: 'moderate',
-        evidence: 'Same-week claim/line volume was normal (z≈2.0–2.3) while dollar amounts and average length of stay both spiked sharply (z 4–13) — consistent with a few expensive claims, not a volume surge.',
-        method: 'Robust z-score comparison of volume vs. dollar-amount deviation in the same bucket. The aggregate audit reconciliation (see Audit tab) is clean but wasn’t run bucket-by-bucket, so this is moderate evidence, not strong.',
+        rank: 1, text: 'No category shows a decisive move — a correction pair offsets to roughly zero net effect', strength: 'weak',
+        evidence: 'Splitting by CLAIM_TYPE, no category shows a decisive move: a REVERSAL/REPLACEMENT correction pair offsets to roughly zero net effect (~$208K swing each way — a normal correction pattern), and ORIGINAL billed amount is essentially flat (+3.8%).',
+        segment: 'CLAIM_TYPE via MEDICAL_CLAIM_HEADER',
+        method: 'Business-dimension breakdown: CLAIM_TYPE split, equal 4-vs-4 week windows.',
+      },
+      {
+        rank: 2, text: 'A handful of unusually high-cost claims landed the week of 2026-05-04', strength: 'moderate',
+        evidence: 'Same-week claim/line volume was normal (z≈2.0–2.3) while dollar amounts and average length of stay both spiked sharply (z 4–13) — consistent with a few expensive claims, not a volume surge. Visible as the anomaly marker on the timeline above.',
+        segment: 'Week of 2026-05-04',
+        method: 'Robust z-score comparison of volume vs. dollar-amount deviation in the same bucket.',
       },
     ],
     series: [
@@ -84,6 +108,9 @@ export const kpis = [
   {
     id: 'header-allowed',
     kpiId: 'main.medical_claim_header.sum_total_allowed_amount',
+    plainStatus: 'Normal right now, but worth watching',
+    plainReason: 'The total allowed amount looks steady overall, but underneath that, the amount allowed per standard, first-time claim has actually been dropping — even though the number of those claims is going up. In other words, we\'re processing more claims, but allowing less per claim on average.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Total Allowed Amount',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER',
@@ -101,7 +128,18 @@ export const kpis = [
     baseline: { mean: 332181.689, median: 296262.685, stddev: 134721.562, mad: 31143.885, min: 253804.92, max: 748883.76, cv: 0.40554, bucketsAvailable: 14, slope: 1434.7386, r2: 0.00147, monthSlope: 14919.54, monthR2: 0.7295, yearSlope: 1091269.70, yearR2: 0.3172, grainsTested: ['native', 'month', 'year'] },
     correlations: [],
     reasons: [
-      { rank: 1, text: 'Same 2026-05-04 spike as the other header dollar amounts', strength: 'moderate', evidence: 'Historical spike week 2026-05-04 (robust z ~9.8). Not individually investigated this pass — see the billed-amount card for the shared attribution.', method: 'Robust z-score comparison; no dedicated pass for this specific KPI, inferred from the shared spike pattern.' },
+      {
+        rank: 1, text: 'ORIGINAL-claim allowed amount is falling even as ORIGINAL claim count rises', strength: 'strong',
+        evidence: 'Splitting by CLAIM_TYPE: ORIGINAL-claim allowed amount fell $176,812 (baseline $1,497,156 → recent $1,320,345), ~111% of the net ~$159,071 decline — even as ORIGINAL claim count rose. Allowed-per-claim is genuinely dropping for standard claims, not a volume effect; the native-grain KPI reads as merely "volatile" because a REVERSAL/REPLACEMENT correction pair (+$87,058/−$74,592) partially masks it in the aggregate.',
+        segment: 'CLAIM_TYPE via MEDICAL_CLAIM_HEADER',
+        method: 'Business-dimension breakdown: CLAIM_TYPE split, equal 4-vs-4 week windows.',
+      },
+      {
+        rank: 2, text: 'Same 2026-05-04 spike as the other header dollar amounts', strength: 'moderate',
+        evidence: 'Historical spike week 2026-05-04 (robust z ~9.8) — the same handful-of-high-cost-claims pattern seen in billed amount. Visible as the anomaly marker on the timeline above; distinct from the per-claim allowed-amount decline described above.',
+        segment: 'Week of 2026-05-04',
+        method: 'Robust z-score comparison; inferred from the shared spike pattern with billed amount.',
+      },
     ],
     series: [
       { bucket: '2026-03-30', value: 230375.21, partial: true }, { bucket: '2026-04-06', value: 253804.92 }, { bucket: '2026-04-13', value: 285233.12 },
@@ -116,6 +154,9 @@ export const kpis = [
   {
     id: 'header-paid',
     kpiId: 'main.medical_claim_header.sum_total_plan_paid_amount',
+    plainStatus: 'Normal right now, but worth watching',
+    plainReason: 'Same pattern as the allowed amount: the total paid looks steady, but the amount actually paid per standard, first-time claim has been dropping even as the number of those claims rises — so less is being paid out per claim on average.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Total Plan-Paid Amount',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER',
@@ -135,7 +176,18 @@ export const kpis = [
       { toId: 'line-paid', name: 'Line-Level Plan-Paid Amount', r: 0.9998, nOverlap: 14, joinKey: 'CLAIM_ID', note: 'Genuine reconciliation pair — same measure at two aggregation levels (header total vs. sum of that claim’s lines).' },
     ],
     reasons: [
-      { rank: 1, text: 'Same 2026-05-04 spike (most extreme of the three header amounts)', strength: 'moderate', evidence: 'Robust z ~13.0 at 2026-05-04 — consistent with the billed/allowed-amount attribution (a handful of high-cost claims, not a volume or data-quality issue).', method: 'Robust z-score comparison; inferred from the shared spike pattern with billed/allowed amounts.' },
+      {
+        rank: 1, text: 'ORIGINAL-claim plan-paid amount is falling — same pattern as allowed amount', strength: 'strong',
+        evidence: 'Splitting by CLAIM_TYPE: ORIGINAL-claim plan-paid amount fell $170,856, ~110% of the net ~$154,865 decline — driven by lower paid-per-claim for standard claims rather than fewer claims. Same masking effect from the REVERSAL/REPLACEMENT correction pair as allowed amount.',
+        segment: 'CLAIM_TYPE via MEDICAL_CLAIM_HEADER',
+        method: 'Business-dimension breakdown: CLAIM_TYPE split, equal 4-vs-4 week windows.',
+      },
+      {
+        rank: 2, text: 'Same 2026-05-04 spike (most extreme of the three header amounts)', strength: 'moderate',
+        evidence: 'Robust z ~13.0 at 2026-05-04 — consistent with the billed/allowed-amount attribution (a handful of high-cost claims, not a volume or data-quality issue). Visible as the anomaly marker on the timeline above.',
+        segment: 'Week of 2026-05-04',
+        method: 'Robust z-score comparison; inferred from the shared spike pattern with billed/allowed amounts.',
+      },
     ],
     series: [
       { bucket: '2026-03-30', value: 179784.06, partial: true }, { bucket: '2026-04-06', value: 197314.29 }, { bucket: '2026-04-13', value: 222515.65 },
@@ -150,6 +202,9 @@ export const kpis = [
   {
     id: 'denial-rate',
     kpiId: 'main.medical_claim_header.avg_is_denied',
+    plainStatus: 'Normal right now, but drifting higher over the longer term',
+    plainReason: 'Denials have been creeping up gradually over the past few years. A big part of it is that more claims are coming from out-of-network providers, and those get denied roughly twice as often as in-network claims — so as out-of-network claims become a bigger share of the mix, the overall denial rate rises with it.',
+    plainConfidence: 'We\'re confident in this reading.',
     name: 'Claim Denial Rate',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER',
@@ -167,8 +222,18 @@ export const kpis = [
     baseline: { mean: 0.120801, median: 0.1253195, stddev: 0.019846, mad: 0.013989, min: 0.078078, max: 0.142473, cv: 0.16432, bucketsAvailable: 14, slope: -0.0000846, r2: 0.00024, monthSlope: 0.0001536, monthR2: 0.0977, yearSlope: 0.0017876, yearR2: 0.8261, grainsTested: ['native', 'month', 'year'], monthOfYearSeasonal: false },
     correlations: [],
     reasons: [
-      { rank: 1, text: 'Real year-over-year secular increase, confirmed non-seasonal', strength: 'strong', evidence: 'Year-grain trend is real (r²=0.83). A month-of-year seasonality check found no cyclical pattern — denial rate ranges narrowly from 11.0% to 12.5% across every calendar month, so this is not a seasonal artifact.', method: 'Multi-grain trend decomposition (native/month/year) plus a month-of-year seasonality test comparing between- vs. within-group variance.' },
-      { rank: 2, text: 'No correlated KPI or usage signal explains the cause', strength: 'weak', evidence: 'Nothing in the manifest’s correlations or usage series points at a driver for the increase.', method: 'Correlation and usage-series search against the manifest — nothing surfaced.' },
+      {
+        rank: 1, text: 'Out-of-network claims deny at ~2x the in-network rate, and are a growing share of volume', strength: 'strong',
+        evidence: 'OUT_OF_NETWORK denial rate is 18.2% vs. 8.5% for IN_NETWORK (trailing 8 weeks), and out-of-network share of total claim volume grew from 39.6% to 43.2% in the same window — a network-mix shift that plausibly explains part of the year-over-year creep below.',
+        segment: 'PROVIDER_NETWORK_STATUS via MEDICAL_CLAIM_HEADER',
+        method: 'Business-dimension breakdown: PROVIDER_NETWORK_STATUS split, equal 4-vs-4 week windows.',
+      },
+      {
+        rank: 2, text: 'Real year-over-year secular increase, confirmed non-seasonal', strength: 'strong',
+        evidence: 'Year-grain trend is real (r²=0.83). A month-of-year seasonality check found no cyclical pattern — denial rate ranges narrowly from 11.0% to 12.5% across every calendar month, so this is not a seasonal artifact. This 8-week network-mix finding is directionally consistent with, but too short a window to independently confirm, the full multi-year trend.',
+        segment: 'All claims, year grain',
+        method: 'Multi-grain trend decomposition (native/month/year) plus a month-of-year seasonality test comparing between- vs. within-group variance.',
+      },
     ],
     series: [
       { bucket: '2026-03-30', value: 0.153333, partial: true }, { bucket: '2026-04-06', value: 0.142473 }, { bucket: '2026-04-13', value: 0.136240 },
@@ -183,6 +248,9 @@ export const kpis = [
   {
     id: 'line-count',
     kpiId: 'main.medical_claim_line.count_star',
+    plainStatus: 'Normal',
+    plainReason: 'This closely tracks the number of claims submitted overall, which is stable. We don\'t have a specific cause breakdown for this one yet — it would need a closer look to say more.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Claim Lines Submitted',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE',
@@ -217,6 +285,9 @@ export const kpis = [
   {
     id: 'line-paid',
     kpiId: 'main.medical_claim_line.sum_plan_paid_amount',
+    plainStatus: 'Normal',
+    plainReason: 'This mirrors the total plan-paid amount at the claim level, which it should always closely match — and it does. We don\'t have a specific cause breakdown for this one yet.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Line-Level Plan-Paid Amount',
     domain: 'Claims Processing',
     table: 'HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE',
@@ -252,6 +323,9 @@ export const kpis = [
   {
     id: 'encounter-count',
     kpiId: 'main.fact_encounter.count_star',
+    plainStatus: 'Normal, close to the upper end of its usual range',
+    plainReason: 'Encounters are running a bit on the high side of normal, tracking closely with the rise in claims volume. We don\'t have a specific cause breakdown for this one yet.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Encounters',
     domain: 'Utilization',
     table: 'HEALTH_CARE.MAIN.FACT_ENCOUNTER',
@@ -286,6 +360,9 @@ export const kpis = [
   {
     id: 'los-avg',
     kpiId: 'main.fact_encounter.avg_length_of_stay_days',
+    plainStatus: 'Normal — no clear pattern found',
+    plainReason: 'Average length of stay isn\'t showing any consistent pattern up or down. This number is likely diluted by encounters that aren\'t overnight stays (which count as zero days) mixed in with ones that are — a cleaner version limited to inpatient stays would probably tell a clearer story.',
+    plainConfidence: 'This is a solid estimate, though the underlying data is a couple months old.',
     name: 'Avg Length of Stay',
     domain: 'Utilization',
     table: 'HEALTH_CARE.MAIN.FACT_ENCOUNTER',
@@ -318,6 +395,9 @@ export const kpis = [
   {
     id: 'payment-amount',
     kpiId: 'main.fact_claim_payment.sum_paid_amount',
+    plainStatus: 'Lower than usual — worth watching',
+    plainReason: 'The dollar amount paid out each week has been trending down for two months, in step with the drop in the number of payments going out — this is very likely the same story: fewer new claims entering the pipeline, not a payment-processing slowdown. We haven\'t independently double-checked the breakdown for the dollar figure yet, but it moves in lockstep with the payment count.',
+    plainConfidence: 'We\'re confident in this reading — the underlying data here is fresh, updated within the last two weeks.',
     name: 'Claim Payments Disbursed ($)',
     domain: 'Claims Payment',
     table: 'HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT',
@@ -335,7 +415,7 @@ export const kpis = [
     baseline: { mean: 257882.512, median: 240872.12, stddev: 111020.775, mad: 57673.0, min: 98724.62, max: 465775.53, cv: 0.43053, bucketsAvailable: 13, slope: -21008.8819, r2: 0.3939, monthSlope: 11898.71, monthR2: 0.5433, yearSlope: 1283871.57, yearR2: 0.6039, grainsTested: ['native', 'month', 'year'] },
     correlations: [],
     reasons: [
-      { rank: 1, text: 'Tracks the critical decline in payment count', strength: 'moderate', evidence: 'Falling at r²=0.39, mirroring fact_claim_payment.count_star’s much stronger decline (r²=0.70). Same month/year-grain growth reversal applies. See that KPI’s detail for the full attribution — the cause of the underlying decline is not confirmed by anything in the manifest.', method: 'Native/month/year trend decomposition, cross-referenced against the correlated count KPI.' },
+      { rank: 1, text: 'Tracks the critical decline in payment count — likely the same ORIGINAL-claims cause, not independently confirmed', strength: 'moderate', evidence: 'Falling at r²=0.39, mirroring fact_claim_payment.count_star’s much stronger decline (r²=0.70). Same month/year-grain growth reversal applies. Shares that KPI’s table and CLAIM_ID join, so its ORIGINAL-claims finding almost certainly explains this decline too — but a dedicated dimension breakdown hasn’t been run for this specific KPI yet, so this stays "moderate," not "strong," until it is.', method: 'Native/month/year trend decomposition, cross-referenced against the correlated count KPI.' },
     ],
     series: [
       { bucket: '2026-06-08', value: 189951.42, partial: true }, { bucket: '2026-06-15', value: 268132.57 }, { bucket: '2026-06-22', value: 465775.53 },
@@ -350,6 +430,9 @@ export const kpis = [
   {
     id: 'payment-count',
     kpiId: 'main.fact_claim_payment.count_star',
+    plainStatus: 'Much lower than usual — needs attention',
+    plainReason: 'Payments are down mainly because fewer brand-new claims are coming through — first-time claim payments dropped by more than half over the past two months, from roughly 1,000 a week to under 500. Payments tied to corrections and resubmissions on existing claims actually held steady or grew in the same period, so this looks like fewer new claims entering the system, not a slowdown in processing the ones already in the pipeline.',
+    plainConfidence: 'We\'re confident in this reading — the underlying data here is fresh, updated within the last two weeks, and this is the clearest finding in the current review.',
     name: 'Claim Payments Disbursed (#)',
     domain: 'Claims Payment',
     table: 'HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT',
@@ -368,18 +451,21 @@ export const kpis = [
     correlations: [],
     reasons: [
       {
-        rank: 1, text: 'Claims submission may have slowed after the June data cutoff', strength: 'weak',
-        evidence: 'Only 4 weeks of overlap exist between FACT_CLAIM_PAYMENT’s data horizon (through 2026-09-01) and MEDICAL_CLAIM_HEADER’s (through 2026-06-30). Their correlation (r=0.24, n=4) fails the ≥8-bucket validity gate — explicitly not usable evidence, whatever the r-value alone might suggest.',
-        method: 'Correlation validity gate (n_overlap ≥ 8) applied to the manifest’s correlations before treating any of them as evidence.',
+        rank: 1, text: 'Decline concentrated entirely in ORIGINAL (first-time) claim payments', strength: 'strong',
+        evidence: 'Joining FACT_CLAIM_PAYMENT to MEDICAL_CLAIM_HEADER via CLAIM_ID and splitting by CLAIM_TYPE (trailing 4 weeks vs. the 4 weeks before): ORIGINAL payments fell from 1,006 (≈$1,143,309) to 466 (≈$598,554) — down 54% by count, ≈110% of the net ≈$495,668 decline. REPLACEMENT (+$87,846), RESUBMISSION (+$37,447) and REVERSAL (−$76,207) payments on existing claims all grew or held in the same period, partly offsetting it.',
+        segment: 'ORIGINAL claim type, via CLAIM_ID join to MEDICAL_CLAIM_HEADER',
+        method: 'Business-dimension breakdown: CLAIM_TYPE split, equal 4-vs-4 week windows, top category’s share of net KPI change.',
       },
       {
-        rank: 2, text: 'Payment processing itself may have slowed, independent of claim volume', strength: 'weak',
-        evidence: 'No direct evidence for or against this in the manifest — not examined this pass.',
-        method: 'No usage/audit signal found pointing at this specifically.',
+        rank: 2, text: 'Reads as slower claims origination, not broken payment processing', strength: 'moderate',
+        evidence: 'Fewer new claims are entering the payment pipeline, but the system is still actively processing corrections, resubmissions and reversals against the existing backlog — that distinction matters for where to look next (upstream intake vs. payment operations).',
+        segment: 'All claim types',
+        method: 'Interpretation of the CLAIM_TYPE breakdown above, not an independently tested hypothesis.',
       },
       {
         rank: 3, text: 'Ruled unlikely: a claims-side data-quality problem', strength: 'strong',
-        evidence: 'Header/line reconciliation (97.9% clean) and duplicate-rate checks on the claims tables are both clean — strong evidence against a claims-side data artifact, though it doesn’t tell us which of the two hypotheses above is correct.',
+        evidence: 'Header/line reconciliation (97.9% clean) and duplicate-rate checks on the claims tables are both clean — rules out a claims-side data artifact as the cause of the decline.',
+        segment: 'All claims',
         method: 'Cross-table reconciliation (Phase 2 audit) + duplicate-rate check.',
       },
     ],
@@ -396,6 +482,9 @@ export const kpis = [
   {
     id: 'pharmacy-count',
     kpiId: 'main.pharmacy_claim.count_star',
+    plainStatus: 'Slightly higher than usual — worth watching',
+    plainReason: 'Pharmacy claims have been trending gently upward for a couple of months. We don\'t have a specific cause identified for this one yet — it would need a closer look.',
+    plainConfidence: 'This is a solid estimate.',
     name: 'Pharmacy Claims Filled',
     domain: 'Pharmacy',
     table: 'HEALTH_CARE.MAIN.PHARMACY_CLAIM',
@@ -428,6 +517,9 @@ export const kpis = [
   {
     id: 'pharmacy-paid',
     kpiId: 'main.pharmacy_claim.sum_plan_paid_amount',
+    plainStatus: 'Normal — just noisier week to week than most',
+    plainReason: 'This number bounces around more from week to week than most of the others we track, but it isn\'t trending up or down overall. We don\'t have a specific cause breakdown for this one yet.',
+    plainConfidence: 'This is a solid estimate.',
     name: 'Pharmacy Plan-Paid Amount',
     domain: 'Pharmacy',
     table: 'HEALTH_CARE.MAIN.PHARMACY_CLAIM',
@@ -455,6 +547,88 @@ export const kpis = [
       { bucket: '2026-06-22', value: 90625.99 }, { bucket: '2026-06-29', value: 16157.18, partial: true },
     ],
     asOfDate: '2026-06-22',
+  },
+
+  {
+    id: 'provider-count',
+    kpiId: 'main.dim_provider.count_star',
+    plainStatus: 'Normal — this is a reference table that doesn\'t update often, not a live feed',
+    plainReason: 'This tracks how many providers are enrolled in the network. It\'s been flat, with a small uptick in specialist enrollments, but off a small enough base that it isn\'t a meaningful shift.',
+    plainConfidence: 'This is a solid estimate, based on a smaller, historical dataset.',
+    name: 'Provider Enrollments',
+    domain: 'Provider Network',
+    table: 'HEALTH_CARE.MAIN.DIM_PROVIDER',
+    unit: 'count',
+    value: 8,
+    state: 'stable',
+    statusTier: 'stable',
+    directionality: 'both',
+    kpiClass: null,
+    confidence: 'medium',
+    warnLower: 0.83, warnUpper: 14.17, critLower: 0, critUpper: 15.28,
+    why: 'Current value inside warn (z~0.23); no real trend at any grain (native/month/year r²<0.15). DIM_PROVIDER is a slowly-changing historical dimension (ENROLLMENT_DATE), not an ongoing operational feed — days_stale=2,645 reflects that, not a broken pipeline, though the standard rule still caps confidence at medium since it can’t tell the two cases apart automatically.',
+    forecast: { next: 8.08, lower: 5.85, upper: 10.3, method: 'trend_band', confidence: 'low' },
+    auditStatus: 'n/a — historical dimension table, not part of the audit/reconciliation pass.',
+    staleButByDesign: true,
+    baseline: { mean: 6.833333, median: 7.5, stddev: 2.208798, mad: 1.5, min: 3, max: 10, cv: 0.3234, bucketsAvailable: 12, slope: 0.076923, r2: 0.015767, monthSlope: 0.0214, monthR2: 0.0079, yearSlope: 8.6, yearR2: 0.0355, grainsTested: ['native', 'month', 'year'] },
+    correlations: [],
+    reasons: [
+      {
+        rank: 1, text: 'No dominant provider-type driver — genuinely stable', strength: 'weak',
+        evidence: 'SPECIALIST enrollments moved most (+12, from 4→16) but off a very low base — not statistically meaningful at this volume. All other provider types moved by 1–3 enrollments.',
+        segment: 'PROVIDER_TYPE via DIM_PROVIDER',
+        method: 'Business-dimension breakdown: PROVIDER_TYPE split, equal 4-vs-4 week windows.',
+      },
+    ],
+    series: [
+      { bucket: '2019-03-11', value: 1, partial: true }, { bucket: '2019-03-18', value: 5 }, { bucket: '2019-03-25', value: 9 },
+      { bucket: '2019-04-01', value: 7 }, { bucket: '2019-04-08', value: 9 }, { bucket: '2019-04-15', value: 5 },
+      { bucket: '2019-04-22', value: 8 }, { bucket: '2019-04-29', value: 3 }, { bucket: '2019-05-06', value: 4 },
+      { bucket: '2019-05-13', value: 6 }, { bucket: '2019-05-20', value: 10 }, { bucket: '2019-05-27', value: 8 },
+      { bucket: '2019-06-03', value: 8 }, { bucket: '2019-06-10', value: 10, partial: true },
+    ],
+    asOfDate: '2019-06-03',
+  },
+
+  {
+    id: 'network-bridge-count',
+    kpiId: 'main.bridge_provider_network.count_star',
+    plainStatus: 'Normal — this is a reference table that doesn\'t update often, not a live feed',
+    plainReason: 'This tracks provider contracts with networks. Both active and terminated contract counts have stayed essentially flat — no meaningful shift in the mix.',
+    plainConfidence: 'This is a solid estimate, based on a smaller, historical dataset.',
+    name: 'Provider–Network Contracts',
+    domain: 'Provider Network',
+    table: 'HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK',
+    unit: 'count',
+    value: 87,
+    state: 'stable',
+    statusTier: 'stable',
+    directionality: 'both',
+    kpiClass: null,
+    confidence: 'medium',
+    warnLower: 73.66, warnUpper: 100.34, critLower: 71.43, critUpper: 102.57,
+    why: 'Current value inside warn (z~0); no real trend at any grain. BRIDGE_PROVIDER_NETWORK is a slowly-changing historical bridge table (EFFECTIVE_DATE reflects historical contract data), not an ongoing operational feed — days_stale=2,445 reflects that, not a broken pipeline.',
+    forecast: { next: 85.51, lower: 81.06, upper: 89.95, method: 'trend_band', confidence: 'medium' },
+    auditStatus: 'n/a — historical bridge table, not part of the audit/reconciliation pass.',
+    staleButByDesign: true,
+    baseline: { mean: 88.583333, median: 87, stddev: 4.621262, mad: 3, min: 83, max: 97, cv: 0.05217, bucketsAvailable: 12, slope: -0.493007, r2: 0.147955, monthSlope: -1.286, monthR2: 0.0248, yearSlope: -638.8, yearR2: 0.1426, grainsTested: ['native', 'month', 'year'] },
+    correlations: [],
+    reasons: [
+      {
+        rank: 1, text: 'No meaningful contract-status mix shift — genuinely stable', strength: 'weak',
+        evidence: 'PARTICIPATING and TERMINATED contract counts are both essentially flat (314→325, 36→37). No dominant category, no real trend at any grain.',
+        segment: 'PARTICIPATION_STATUS via BRIDGE_PROVIDER_NETWORK',
+        method: 'Business-dimension breakdown: PARTICIPATION_STATUS split, equal 4-vs-4 week windows.',
+      },
+    ],
+    series: [
+      { bucket: '2019-09-30', value: 53, partial: true }, { bucket: '2019-10-07', value: 97 }, { bucket: '2019-10-14', value: 92 },
+      { bucket: '2019-10-21', value: 85 }, { bucket: '2019-10-28', value: 87 }, { bucket: '2019-11-04', value: 83 },
+      { bucket: '2019-11-11', value: 91 }, { bucket: '2019-11-18', value: 96 }, { bucket: '2019-11-25', value: 84 },
+      { bucket: '2019-12-02', value: 90 }, { bucket: '2019-12-09', value: 85 }, { bucket: '2019-12-16', value: 86 },
+      { bucket: '2019-12-23', value: 87 }, { bucket: '2019-12-30', value: 37, partial: true },
+    ],
+    asOfDate: '2019-12-23',
   },
 ]
 

@@ -9,28 +9,28 @@ export default function FollowUpPanel({ kpi }) {
 
   return (
     <div>
-      <div className="mono" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-2)', marginBottom: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 8 }}>
         Audit &amp; data-quality status
       </div>
-      <div style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--ink-soft)', maxWidth: '60ch' }}>
+      <div style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink)' }}>
         {hasAudit ? kpi.auditStatus : 'No reconciliation or duplicate-rate check was run against this KPI’s table this pass.'}
       </div>
 
       {weakReasons.length > 0 && (
         <>
-          <div className="mono" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-2)', margin: '24px 0 10px' }}>
-            Worth investigating further
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '18px 0 8px' }}>
+            Suggested follow-up
           </div>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: 'var(--ink-soft)' }}>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color: 'var(--ink)' }}>
             {weakReasons.map((r, i) => (
-              <li key={i}>{r.text} — no strong evidence found in what's been discovered so far; would need a fresh investigation.</li>
+              <li key={i}>{r.text} — no strong evidence found so far; worth a dedicated pass.</li>
             ))}
           </ul>
         </>
       )}
 
-      <div style={{ marginTop: 24, fontSize: 12, color: 'var(--muted)', maxWidth: '60ch' }}>
-        This dashboard reports detection, attribution, and forecasts — not a recommended fix. Remediation is a business call that belongs to the KPI's owning team.
+      <div style={{ marginTop: 18, fontSize: 12, color: 'var(--ink-3)' }}>
+        This dashboard reports detection, attribution and forecasts — not a recommended fix. Remediation is a business call for the KPI's owning team.
       </div>
     </div>
   )

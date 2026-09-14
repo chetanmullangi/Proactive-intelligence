@@ -1,5 +1,31 @@
 # HEALTH_CARE — Data Profile & KPI Report
 
+*This report is a technical inventory for whoever runs or maintains this pipeline — table names, SQL, and usage statistics appear throughout. For a plain-language read on what's actually happening with these KPIs, see `reports/HEALTH_CARE/anomaly_report.md`, Part 1.*
+
+## 0. KPI Directory (Plain English)
+
+What's tracked in this database, with no technical detail — just what each number means and which way it's currently moving.
+
+| KPI | What it measures | Currently |
+|---|---|---|
+| Claims Submitted | How many medical claims were submitted each week. | Flat |
+| Total Billed Amount | The total dollar amount billed across all medical claims each week. | Volatile |
+| Total Allowed Amount | The total dollar amount insurance allowed (approved as billable) across all medical claims each week. | Volatile |
+| Total Plan-Paid Amount | The total dollar amount the plan actually paid out across all medical claims each week. | Volatile |
+| Claim Denial Rate | The share of medical claims that get denied instead of paid. | Flat (rising slowly over the long run) |
+| Claim Lines Submitted | How many individual line items (services/procedures) were submitted across all claims each week. | Flat |
+| Line-Level Plan-Paid Amount | The total dollar amount paid out at the line-item level each week — should closely match the claim-level total. | Volatile |
+| Encounters | How many patient visits or hospital stays were recorded each week. | Flat |
+| Avg Length of Stay | The average number of days patients stayed per encounter. | Volatile |
+| Claim Payments Disbursed ($) | The total dollar amount actually disbursed in claim payments each week. | Falling |
+| Claim Payments Disbursed (#) | How many individual claim payments were disbursed each week. | Falling |
+| Pharmacy Claims Filled | How many pharmacy claims were filled each week. | Rising |
+| Pharmacy Plan-Paid Amount | The total dollar amount the plan paid out for pharmacy claims each week. | Volatile |
+| Providers Enrolled | How many providers are currently enrolled in the network. | Flat |
+| Provider–Network Contracts | How many active provider-network contracts exist. | Flat |
+
+Everything below this point is the technical record behind that directory — table names, statistics, and raw SQL, meant for the data team.
+
 Generated 2026-09-10 by `snowflake-data-profiler` (run manually in-session; see Caveats). Target database: `HEALTH_CARE`. Lookback: 90 days, anchored per-table to that table's own `MAX(date_column)` rather than wall-clock `CURRENT_TIMESTAMP()` — see Caveats for why.
 
 **Rerun note (2026-09-11)**: this is the third pass. The first added `freshness_sql`/`history_span_sql`/`monthly_trend_sql`/`yearly_trend_sql`/`month_of_year_seasonality_sql`. **This pass fixes a real methodology gap**: every prior run only structurally scanned 5 hand-picked "big" tables (`MEDICAL_CLAIM_HEADER`, `MEDICAL_CLAIM_LINE`, `FACT_ENCOUNTER`, `FACT_CLAIM_PAYMENT`, `PHARMACY_CLAIM`) rather than the full 37-table `MAIN` schema, and treated `ACCESS_HISTORY` usage as a scoring tiebreaker rather than a primary discovery input. Both are corrected here: all 37 tables were checked structurally this pass, and a database-wide `ACCESS_HISTORY` query ran to surface any `(table, column)` pair with real query traffic regardless of table size. Result: **two new KPIs surfaced that the old scope would never have found** — `dim_provider.count_star` and `bridge_provider_network.count_star` — see §3. The usage-history half of discovery turned out to be uninformative this pass (see the new Caveats bullet on why) but the mechanism itself is now verified working, not just specified.

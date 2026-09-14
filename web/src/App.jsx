@@ -1,36 +1,40 @@
-import { useState } from 'react'
-import Header from './components/Header.jsx'
+import { useEffect, useRef, useState } from 'react'
+import Rail from './components/Rail.jsx'
+import TopBar from './components/TopBar.jsx'
 import SummaryStrip from './components/SummaryStrip.jsx'
 import FilterBar from './components/FilterBar.jsx'
 import KpiCard from './components/KpiCard.jsx'
 import KpiDetail from './components/KpiDetail.jsx'
-import ReviewBar from './components/ReviewBar.jsx'
-import ChatPanel from './components/ChatPanel.jsx'
-import { kpis, kpiById } from './data/kpis.js'
+import ChatDrawer from './components/ChatDrawer.jsx'
+import { kpis, kpiById, generatedAt } from './data/kpis.js'
 import { answer, suggestionsFor } from './lib/chatEngine.js'
+import { askLive } from './lib/liveChat.js'
 import { usePersisted } from './lib/usePersisted.js'
 
 const STATUS_LABEL_TO_TIER = { Anomaly: 'anomaly', Watch: 'watch', Stable: 'stable' }
 const TIER_RANK = { anomaly: 0, watch: 1, stable: 2 }
 
 export default function App() {
-  // Persisted across browser close/reopen (localStorage, this browser only):
-  // which KPI/chart you were looking at, the filter, which reasons you've
-  // reviewed, and every KPI's own chat thread. Transient (not persisted):
-  // the in-progress chat input and the "analysing…" spinner — resuming with
-  // a half-typed message or a stuck spinner would be worse than losing it.
   const [view, setView] = usePersisted('view', 'grid')
   const [id, setId] = usePersisted('id', null)
   const [filter, setFilter] = usePersisted('filter', 'All')
   const [open, setOpen] = usePersisted('open', {})
   const [reviewed, setReviewed] = usePersisted('reviewed', {})
-  const [chatOpenFor, setChatOpenFor] = usePersisted('chatOpenFor', null) // kpi id, or null
+  const [chatOpenFor, setChatOpenFor] = usePersisted('chatOpenFor', null)
   const [msgsByKpi, setMsgsByKpi] = usePersisted('msgsByKpi', {})
+  const [railFull, setRailFull] = usePersisted('railFull', null) // null = auto by width
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1440)
+  const rootRef = useRef(null)
 
-  // Guard against stale persisted state (e.g. this app's data was
-  // regenerated and an old KPI id no longer exists) rather than crashing.
+  useEffect(() => {
+    const onResize = () => setWidth(rootRef.current ? rootRef.current.offsetWidth : window.innerWidth)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const kpi = id ? kpiById(id) : null
   if (id && !kpi && view === 'detail') {
     setView('grid')
@@ -40,12 +44,9 @@ export default function App() {
   const go = (kpiId) => {
     setView('detail')
     setId(kpiId)
-    setChatOpenFor(null) // close the panel on navigation; the thread underneath is kept
+    setChatOpenFor(null)
   }
-
-  const back = () => {
-    setView('grid')
-  }
+  const back = () => setView('grid')
 
   const toggleReason = (key) => {
     setOpen((o) => ({ ...o, [key]: !o[key] }))
@@ -53,12 +54,11 @@ export default function App() {
   }
 
   const reviewedCount = kpi ? kpi.reasons.filter((_, i) => reviewed[kpi.id + i]).length : 0
-  const canChat = kpi ? reviewedCount > 0 : false
-  const chatOpen = chatOpenFor === id
+  const chatOpen = !!kpi && chatOpenFor === id
   const msgs = kpi ? msgsByKpi[kpi.id] || [] : []
 
   const openChat = (seed) => {
-    const intro = { role: 'a', text: `I have the full record for ${kpi.name} loaded — the ranked reasons, correlations, forecast, and audit status behind it. Ask me anything about it.` }
+    const intro = { role: 'a', text: `I have the full record for ${kpi.name} loaded — ranked reasons, correlations, forecast and audit status. Ask me anything about it.` }
     setChatOpenFor(kpi.id)
     setMsgsByKpi((m) => (m[kpi.id]?.length ? m : { ...m, [kpi.id]: [intro] }))
     if (seed) send(seed)
@@ -68,67 +68,91 @@ export default function App() {
     const text = (override ?? input).trim()
     if (!text || busy || !kpi) return
     const kpiId = kpi.id
+    const history = msgsByKpi[kpiId] || []
     setMsgsByKpi((m) => ({ ...m, [kpiId]: (m[kpiId] || []).concat([{ role: 'u', text }]) }))
     setInput('')
     setBusy(true)
-    setTimeout(() => {
-      const reply = answer(kpi, text)
-      setMsgsByKpi((m) => ({ ...m, [kpiId]: (m[kpiId] || []).concat([{ role: 'a', text: reply }]) }))
-      setBusy(false)
-    }, 380)
+    askLive(kpi, text, history)
+      .catch(() => {
+        // Live analyst server isn't reachable — fall back to the offline,
+        // record-grounded canned engine rather than failing the chat.
+        return (
+          answer(kpi, text) +
+          '\n\n(Offline mode — the live analyst isn’t running right now, so this is a saved answer from the record instead.)'
+        )
+      })
+      .then((reply) => {
+        setMsgsByKpi((m) => ({ ...m, [kpiId]: (m[kpiId] || []).concat([{ role: 'a', text: reply }]) }))
+      })
+      .finally(() => setBusy(false))
   }
 
-  if (view === 'grid' || !kpi) {
-    let list = kpis.slice()
-    if (filter !== 'All') list = list.filter((k) => k.statusTier === STATUS_LABEL_TO_TIER[filter])
-    list.sort((a, b) => TIER_RANK[a.statusTier] - TIER_RANK[b.statusTier])
+  const railFullResolved = railFull === null ? width >= 1240 : railFull
+  const chatFloats = width < 1080
 
-    return (
-      <div style={{ color: 'var(--ink)', minHeight: '100vh', background: 'var(--bg)' }}>
-        <Header crumb="Portfolio" />
-        <div style={{ maxWidth: 1320, margin: '0 auto', padding: '56px 32px 80px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '28px 48px', alignItems: 'flex-end', paddingBottom: 28, borderBottom: '2px solid var(--ink)' }}>
-            <div style={{ flex: '1 1 420px', minWidth: 0 }}>
-              <div className="mono" style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 18 }}>
-                HEALTH_CARE · anomaly review
-              </div>
-              <h1 style={{ margin: 0, fontSize: 'clamp(34px,5vw,60px)', lineHeight: 0.98, letterSpacing: '-0.035em', fontWeight: 600, maxWidth: '14ch' }}>
-                KPI health and the reasons behind it
-              </h1>
-            </div>
-            <p style={{ flex: '1 1 260px', minWidth: 0, maxWidth: 320, margin: 0, fontSize: 14, lineHeight: 1.55, color: 'var(--muted-3)' }}>
-              13 KPIs from HEALTH_CARE, scored for anomaly severity. Each card opens a full breakdown — ranked reasons, correlation evidence, a real forecast, and an analyst you can question.
-            </p>
-          </div>
-
-          <SummaryStrip kpis={kpis} />
-          <FilterBar filter={filter} onChange={setFilter} shownCount={list.length} />
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(340px,1fr))', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
-            {list.map((k) => (
-              <KpiCard key={k.id} kpi={k} onOpen={() => go(k.id)} />
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  let list = kpis.slice()
+  if (filter !== 'All') list = list.filter((k) => k.statusTier === STATUS_LABEL_TO_TIER[filter])
+  list.sort((a, b) => TIER_RANK[a.statusTier] - TIER_RANK[b.statusTier])
 
   return (
-    <div style={{ color: 'var(--ink)', minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header crumb={`Portfolio / ${kpi.name}`} />
-      <KpiDetail
-        kpi={kpi}
-        onBack={back}
-        onOpenKpi={go}
-        open={open}
-        onToggleReason={toggleReason}
-        onAsk={(seed) => openChat(seed)}
+    <div ref={rootRef} style={{ position: 'relative', display: 'flex', height: '100vh', overflow: 'hidden', background: '#fff', color: 'var(--ink)' }}>
+      <Rail
+        kpis={kpis}
+        full={railFullResolved}
+        onToggle={() => setRailFull(!railFullResolved)}
+        view={view}
+        currentId={id}
+        onGrid={back}
+        onOpen={go}
+        generatedAt={generatedAt}
       />
-      <ReviewBar reviewedCount={reviewedCount} totalCount={kpi.reasons.length} canChat={canChat} onChat={() => canChat && openChat()} />
+
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <TopBar crumb={view === 'grid' ? 'Portfolio' : `Portfolio / ${kpi?.name}`} kpi={kpi} chatOpen={chatOpen} onOpenChat={() => openChat()} onBack={back} />
+
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          {(view === 'grid' || !kpi) && (
+            <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px clamp(14px,2vw,28px) 48px', animation: 'fadeUp 200ms ease both' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 20, alignItems: 'stretch' }}>
+                <div style={{ borderRadius: 14, background: '#f6f6ff', border: '1px solid #dedefb', padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#fff', background: 'var(--pri)', borderRadius: 999, padding: '4px 10px' }}>
+                    HEALTH_CARE · anomaly review
+                  </span>
+                  <h1 style={{ margin: 0, fontSize: 'clamp(24px,2.4vw,32px)', lineHeight: 1.12, letterSpacing: '-0.025em', fontWeight: 600 }}>KPI health, and the reasons behind it</h1>
+                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: '52ch' }}>
+                    {kpis.length} metrics from HEALTH_CARE, scored for anomaly severity. Open a card for the full breakdown — ranked business-language reasons, correlation evidence, a real forecast — and question the analyst as you read.
+                  </p>
+                </div>
+                <SummaryStrip kpis={kpis} />
+              </div>
+
+              <FilterBar filter={filter} onChange={setFilter} shownCount={list.length} totalCount={kpis.length} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 16 }}>
+                {list.map((k) => (
+                  <KpiCard key={k.id} kpi={k} onOpen={() => go(k.id)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {view === 'detail' && kpi && (
+            <KpiDetail
+              kpi={kpi}
+              onOpenKpi={go}
+              open={open}
+              onToggleReason={toggleReason}
+              reviewedCount={reviewedCount}
+              onAsk={(seed) => openChat(seed)}
+            />
+          )}
+        </div>
+      </main>
+
       {chatOpen && (
-        <ChatPanel
+        <ChatDrawer
           kpi={kpi}
+          floats={chatFloats}
           msgs={msgs}
           input={input}
           busy={busy}

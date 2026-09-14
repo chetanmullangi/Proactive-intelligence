@@ -26,7 +26,7 @@ export function answer(kpi, question) {
 
   if (t.includes('correlat') || t.includes('relat')) {
     if (!kpi.correlations.length) {
-      return `No correlations were computed for this KPI this pass — it wasn't part of the manifest's correlation set (only 5 of 13 KPIs are).`
+      return `No correlations were computed for this KPI this pass — it wasn't part of the manifest's correlation set (only 5 of 15 KPIs are).`
     }
     return kpi.correlations
       .map((c) => `${c.name} (r = ${c.r >= 0 ? '+' : ''}${c.r.toFixed(3)}, n=${c.nOverlap}): ${c.note}`)
