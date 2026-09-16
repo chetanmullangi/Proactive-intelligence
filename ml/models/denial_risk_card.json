@@ -1,0 +1,53 @@
+{
+  "feature_cols": [
+    "claim_type",
+    "claim_form_type",
+    "coverage_type",
+    "provider_network_status",
+    "place_of_service_code",
+    "claim_category",
+    "is_facility_claim_flag",
+    "total_billed_amount",
+    "line_count",
+    "is_cob_secondary_flag",
+    "is_eligibility_valid_flag",
+    "provider_type",
+    "primary_specialty",
+    "utilization_cohort",
+    "risk_score",
+    "chronic_condition_count",
+    "primary_segment",
+    "procedure_category",
+    "typical_setting",
+    "provider_trailing_denial_rate",
+    "network_status_trailing_denial_rate"
+  ],
+  "target": "is_denied",
+  "target_id": "denial_risk",
+  "task": "binary",
+  "metrics": {
+    "roc_auc": 0.6892724968621231,
+    "pr_auc": 0.22870692352246572,
+    "brier": 0.10505571499230276,
+    "base_rate": 0.126
+  },
+  "feature_importance": {
+    "risk_score": 490.0,
+    "total_billed_amount": 481.0,
+    "provider_trailing_denial_rate": 418.0,
+    "primary_specialty": 150.0,
+    "chronic_condition_count": 111.0,
+    "claim_type": 100.0,
+    "line_count": 93.0,
+    "claim_category": 51.0,
+    "provider_network_status": 49.0,
+    "procedure_category": 46.0,
+    "place_of_service_code": 44.0,
+    "is_cob_secondary_flag": 40.0,
+    "primary_segment": 23.0,
+    "network_status_trailing_denial_rate": 22.0,
+    "coverage_type": 17.0
+  },
+  "trained_at": "2026-09-14T05:27:54.457982+00:00",
+  "lightgbm_version": "4.7.0"
+}

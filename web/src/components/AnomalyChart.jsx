@@ -75,7 +75,7 @@ export default function AnomalyChart({ kpi }) {
         ))}
       </svg>
       <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 6 }}>
-        {s.length} real weekly buckets through {kpi.asOfDate} (hollow points are partial-week, don't read as trend endpoints). Forecast point is the single trend-band projection from Phase 3 — not a multi-month curve.
+        {s.length} weeks of actual data through {kpi.asOfDate}. Hollow point is a week still in progress — not a real reading yet. The dotted line is next week's estimate, with the shaded band showing the normal range.
       </div>
     </div>
   )

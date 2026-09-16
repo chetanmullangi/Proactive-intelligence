@@ -1,0 +1,104 @@
+{
+  "database": "HEALTH_CARE",
+  "generated_at": "2026-09-16T11:10:00Z",
+  "discovery_note": "Pass 2 (2026-09-16), incremental. Triggered by snowflake-data-profiler's pass 9 (2026-09-16) newly profiling FACT_PREMIUM, FACT_MEMBER_MONTH, and 5 MART_* tables. Fresh full-schema discovery scan re-run as always; re-verified all 3 prior targets (denial_risk, payment_delay_risk, pharmacy_reject_risk) still qualify -- MEDICAL_CLAIM_HEADER row count is byte-for-byte unchanged (99,271, identical to the prior run's skipped-candidate note), the open-claim population is exactly the same 401 claims (SUBMITTED 110 + PENDED 57 + ADJUDICATED 234), and all 3 models are 2 days old (well under the 7-day freshness window) -- so no retraining was performed; Phase 5-8 (rescore, aggregate, brief) was re-run against the existing models and produced byte-identical flagged sets, rates, and exposure dollars to the prior run, confirming nothing has drifted. Investigated FACT_PREMIUM and FACT_MEMBER_MONTH directly as instructed: neither supports a new binary/delay outcome on its own -- FACT_PREMIUM.TRANSACTION_STATUS is constant ('POSTED', zero variance, no non-payment/failed-payment concept exists in this schema, only billing/allocation amounts with no 'amount received' column), and FACT_MEMBER_MONTH has no status or outcome-shaped column at all (pure demographic/risk-score snapshot). Checked whether FACT_PREMIUM changes the previously-skipped 'underpayment vs. contracted rate' calculus per this run's instructions: it does not -- FACT_PREMIUM.RATING_PMPM_RATE vs BILLED_PREMIUM_AMOUNT gap (median abs $141) is a premium-billing table structurally unrelated to medical-claim adjudication, and the gap itself is explained by COVERAGE_TIER multiplying a base rate, not a billing error signal -- that skip stands unchanged. All 5 MART_* tables confirmed pre-aggregated annual/monthly rollups (member-year, provider-year, pharmacy-class-year, PMPM-plan-month, utilization-per-1000) with no per-instance pending/resolved lifecycle -- not a fit for row-level risk scoring, as expected. One new viable candidate found via MEMBER_ELIGIBILITY (already-known table, not one of the newly-profiled ones, but directly relevant to the enrollment domain the profiler just expanded into): coverage_lapse_risk, predicting whether a member's coverage segment will end without a follow-on segment (real disenrollment vs. renewal/plan-change/continuation). Trained; overall per-row ranking is weak (ROC-AUC 0.509, PR-AUC lift over baseline only ~4%) -- ML score alone does not reliably rank individual members -- but a real, reproducible segment-level concentration was found directly in the historical data (individual-market enrollees lapse at ~1.5x the overall rate; a cluster of 6 employer groups lapse at ~2x) and corroborated independently by which currently-active members the weak model still flags as highest-risk (same segments over-represented in the top decile). Included in the brief with an explicit confidence caveat rather than discarded, consistent with the honesty standard applied elsewhere in this pipeline. 30-day readmission risk and underpayment-vs-contracted-rate remain skipped for their original, unchanged reasons.",
+  "targets": [
+    {
+      "target_id": "denial_risk",
+      "table": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "target_column": "DENIAL_REASON_CODE IS NOT NULL",
+      "task": "binary",
+      "prediction_point": "SUBMISSION_DATE",
+      "training_rows": 15000,
+      "positive_rate": 0.1232,
+      "held_out_metric": {"roc_auc": 0.6893, "pr_auc": 0.2287, "brier": 0.1051},
+      "leakage_check": "IS_ELIGIBILITY_VALID_FLAG included as a feature and checked for leakage: not a dominant feature (outside top 10 by importance) and ROC-AUC (0.689) is well under the 0.95 leakage threshold. Kept in the model.",
+      "leakage_cols_excluded": ["ADJUDICATION_DATE", "PAYMENT_DATE", "CLAIM_STATUS", "DENIAL_REASON_CODE", "TOTAL_ALLOWED_AMOUNT", "TOTAL_PLAN_PAID_AMOUNT", "TOTAL_MEMBER_RESPONSIBILITY_AMOUNT", "DEDUCTIBLE_AMOUNT", "COPAY_AMOUNT", "COINSURANCE_AMOUNT", "COB_PRIMARY_PAID_AMOUNT"],
+      "config_path": "ml/configs/denial_risk.json",
+      "model_path": "ml/models/denial_risk.joblib",
+      "trained_at": "2026-09-14T05:27:54Z",
+      "reverified_at": "2026-09-16T11:10:00Z",
+      "reverify_note": "Data unchanged (MEDICAL_CLAIM_HEADER row count identical, 401-claim open population identical) -- not retrained, rescored only. Flagged set, rates, and exposure dollars came back byte-identical to the prior run."
+    },
+    {
+      "target_id": "payment_delay_risk",
+      "table": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "target_column": "DATEDIFF(day, SUBMISSION_DATE, PAYMENT_DATE) > 44 (real p80 of the historical gap, computed from data)",
+      "task": "binary",
+      "prediction_point": "SUBMISSION_DATE",
+      "scope": "WHERE DENIAL_REASON_CODE IS NULL (denied claims never reach payment)",
+      "training_rows": 15000,
+      "positive_rate": 0.1587,
+      "held_out_metric": {"roc_auc": 0.5676, "pr_auc": 0.2451, "brier": 0.1071},
+      "leakage_cols_excluded": ["ADJUDICATION_DATE", "PAYMENT_DATE", "CLAIM_STATUS", "DENIAL_REASON_CODE", "TOTAL_ALLOWED_AMOUNT", "TOTAL_PLAN_PAID_AMOUNT", "TOTAL_MEMBER_RESPONSIBILITY_AMOUNT", "DEDUCTIBLE_AMOUNT", "COPAY_AMOUNT", "COINSURANCE_AMOUNT", "COB_PRIMARY_PAID_AMOUNT"],
+      "config_path": "ml/configs/payment_delay_risk.json",
+      "model_path": "ml/models/payment_delay_risk.joblib",
+      "trained_at": "2026-09-14T05:28:50Z",
+      "note": "Weak overall ROC-AUC (ranking quality is noisy) but the top concentrated pattern found in aggregation (REPLACEMENT claim type) is very clean -- 100% of flagged claims in this run were REPLACEMENT type.",
+      "reverified_at": "2026-09-16T11:10:00Z",
+      "reverify_note": "Data unchanged -- not retrained, rescored only. Flagged set, rates, and exposure dollars came back byte-identical to the prior run."
+    },
+    {
+      "target_id": "pharmacy_reject_risk",
+      "table": "HEALTH_CARE.MAIN.PHARMACY_CLAIM",
+      "target_column": "REJECT_REASON_CODE IS NOT NULL",
+      "task": "binary",
+      "prediction_point": "FILL_DATE",
+      "training_rows": 30000,
+      "positive_rate": 0.0083,
+      "held_out_metric": {"roc_auc": 0.5684, "pr_auc": 0.0096, "brier": 0.0065},
+      "note": "Very rare positive class (0.83%) -- PR-AUC (0.0096) barely above the 0.0065 baseline. Trust PR-AUC over ROC-AUC per train.py's own guidance. Lowest-confidence of the three original models; a real but thin signal.",
+      "leakage_cols_excluded": ["PAID_DATE", "CLAIM_STATUS", "IS_REVERSAL_FLAG", "ALLOWED_AMOUNT", "PLAN_PAID_AMOUNT", "MEMBER_RESPONSIBILITY_AMOUNT", "REJECT_REASON_CODE"],
+      "config_path": "ml/configs/pharmacy_reject_risk.json",
+      "model_path": "ml/models/pharmacy_reject_risk.joblib",
+      "trained_at": "2026-09-14T05:29:42Z",
+      "reverified_at": "2026-09-16T11:10:00Z",
+      "reverify_note": "PHARMACY_CLAIM row count and fill-date range unchanged since last run -- not retrained, rescored only against the same 4,695-row 60-90-day monitoring window. Flagged set, rates, and exposure dollars came back byte-identical to the prior run."
+    },
+    {
+      "target_id": "coverage_lapse_risk",
+      "table": "HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY",
+      "target_column": "No follow-on eligibility segment exists for the member after this segment's TERMINATION_DATE (real disenrollment vs. renewal/plan-change continuation)",
+      "task": "binary",
+      "prediction_point": "EFFECTIVE_DATE (start of the coverage segment)",
+      "scope": "WHERE TERMINATION_DATE IS NOT NULL AND TERMINATION_DATE <= CURRENT_DATE - 180 days (to avoid right-censoring bias -- recent terminations haven't had enough time for a real follow-on segment to appear yet)",
+      "training_rows": 12043,
+      "positive_rate": 0.0671,
+      "held_out_metric": {"roc_auc": 0.509, "pr_auc": 0.0854, "brier": 0.0765, "baseline_pr_auc": 0.0818},
+      "note": "Discovered this run while investigating the domain around the newly-profiled FACT_PREMIUM/FACT_MEMBER_MONTH tables (the outcome itself lives on MEMBER_ELIGIBILITY, not those two tables directly -- see discovery_note). ROC-AUC (0.509) is barely better than chance and an 80%-recall threshold on the held-out test set required flagging the entire population -- the row-level model does NOT reliably rank individual members and should not be used to prioritize a per-member action list. However, a real, reproducible segment-level concentration exists independent of the model's ranking quality: computed directly from historical rates, GROUP_TIER=INDIVIDUAL lapses at 10.4% vs. 6.7% overall (n=1,647, 1.55x lift), and 6 specific employer groups (GRP00069, GRP00073, GRP00075, GRP00084, GRP00042, GRP00102) lapse at 12.1-15.4% (each n=49-157). This same concentration independently shows up in which currently-active members the weak model still flags as highest-risk (44% of its top-decile flags are GROUP_TIER=INDIVIDUAL vs. 12.6% of the active population) -- two independent views agreeing is why this was kept in the brief despite the weak row-level score, with an explicit confidence caveat.",
+      "leakage_cols_excluded": ["TERMINATION_DATE", "COVERAGE_MONTHS_COUNT", "IS_CURRENT_FLAG", "IS_DUPLICATE_FLAG", "RECORD_CREATED_DATE", "RECORD_UPDATED_DATE"],
+      "leakage_check": "IS_CURRENT_FLAG excluded structurally as target-adjacent (by definition false for every historical/resolved training row and true for every to-be-scored row -- would have been a giveaway). COVERAGE_MONTHS_COUNT excluded as it IS the segment length, i.e. directly derived from the outcome. RECORD_CREATED_DATE/RECORD_UPDATED_DATE treated as ambiguous (could postdate EFFECTIVE_DATE) and excluded per the 'ambiguous -> treat as leakage' rule.",
+      "config_path": "ml/configs/coverage_lapse_risk.json",
+      "model_path": "ml/models/coverage_lapse_risk.joblib",
+      "trained_at": "2026-09-16T11:06:34Z",
+      "scoring_population": "1,978 currently-active eligibility segments (IS_CURRENT_FLAG = TRUE) as of this run"
+    }
+  ],
+  "skipped": [
+    {
+      "candidate": "30-day readmission risk",
+      "tables": ["HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.IS_READMISSION_30D_FLAG", "HEALTH_CARE.MAIN.FACT_ENCOUNTER.IS_READMISSION_30D_FLAG"],
+      "reason": "Too few positive examples to train responsibly: 144 of 99,271 claims (0.15%) and only 36 of 78,566 encounters (0.046%) -- both well under the ~0.5% floor for a first useful model. Skipped, not dropped -- revisit once more history accumulates or if this is combined across more encounter years. Re-checked this run: MEDICAL_CLAIM_HEADER row count is unchanged (99,271), so this calculus has not changed."
+    },
+    {
+      "candidate": "underpayment vs. contracted rate",
+      "tables": ["HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER", "HEALTH_CARE.MAIN.DIM_NETWORK", "HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK"],
+      "reason": "No per-procedure contracted-rate reference table exists in this schema -- only aggregate discount indices (DIM_NETWORK.CONTRACT_DISCOUNT_INDEX, BRIDGE_PROVIDER_NETWORK.CONTRACT_DISCOUNT_INDEX). The billed/allowed/paid gap on MEDICAL_CLAIM_HEADER reflects member cost-share (deductible/copay/coinsurance), not a payer-shortfall signal. Not modelable without additional reference data this database doesn't have. Re-checked this run per the specific instruction to see whether the newly-profiled FACT_PREMIUM table changes this: it does not -- FACT_PREMIUM is a premium-billing table (member/employer/subsidy contributions toward monthly premium), structurally unrelated to medical-claim adjudication or provider contracted rates. Its RATING_PMPM_RATE vs BILLED_PREMIUM_AMOUNT gap (median abs $141) is explained by COVERAGE_TIER multiplying a base per-member rate, not a billing-accuracy or underpayment signal -- checked directly, not assumed."
+    },
+    {
+      "candidate": "premium non-payment / failed-payment risk",
+      "tables": ["HEALTH_CARE.MAIN.FACT_PREMIUM"],
+      "reason": "New candidate considered this run given FACT_PREMIUM was newly profiled. FACT_PREMIUM.TRANSACTION_STATUS is constant across all 139,579 rows ('POSTED', zero variance) -- there is no failed-payment, non-payment, or outstanding-balance concept anywhere in this table's schema, only billing/allocation amounts (BILLED_PREMIUM_AMOUNT, EMPLOYER/MEMBER_CONTRIBUTION_AMOUNT, SUBSIDY_APTC_AMOUNT, GOVERNMENT_CAPITATION_AMOUNT) with no corresponding 'amount actually received' column to compare against. Not modelable without additional reference data (e.g. a real remittance/payment-received table) this database doesn't have."
+    },
+    {
+      "candidate": "member-month billing/enrollment mismatch",
+      "tables": ["HEALTH_CARE.MAIN.FACT_MEMBER_MONTH", "HEALTH_CARE.MAIN.FACT_PREMIUM"],
+      "reason": "New candidate considered this run given FACT_MEMBER_MONTH was newly profiled. FACT_MEMBER_MONTH has no status or outcome-shaped column at all -- it is a pure per-member-month demographic/risk-score snapshot (age, gender, utilization cohort, risk score) with no terminal state to predict. A mismatch outcome would require comparing it row-for-row against FACT_PREMIUM on MEMBER_MONTH_KEY to find member-months with enrollment but no premium billed (or vice versa); a quick structural check found both tables share MEMBER_MONTH_KEY, but building and validating that comparison honestly needs more time than this pass allows -- noted as a real, worth-revisiting idea for a future run, not rejected as non-viable."
+    },
+    {
+      "candidate": "future-year high-cost-member risk (MART_MEMBER_YEAR_SUMMARY.IS_HIGH_COST_FLAG / IS_TOP_5_PCT_COST_FLAG)",
+      "tables": ["HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY"],
+      "reason": "MART_MEMBER_YEAR_SUMMARY and the other 4 newly-profiled MART_* tables are pre-aggregated annual/monthly rollups (member-year, provider-year, pharmacy-class-year, PMPM-plan-month, utilization-per-1000), not row-level transactional records with a pending/resolved lifecycle -- not a fit for this agent's row-level scoring approach as-is. IS_HIGH_COST_FLAG/IS_TOP_5_PCT_COST_FLAG are computed FROM the same year's own aggregate (target-adjacent by construction), so a legitimate model would need a different, cross-year setup entirely: predict year Y's flag using only year Y-1's trailing features, joined member-to-member across years. That is a real, plausible future prediction target but a meaningfully different extraction pattern than anything else in this manifest -- deferred to a dedicated future pass rather than attempted under this run's time budget."
+    }
+  ]
+}

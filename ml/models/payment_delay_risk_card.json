@@ -1,0 +1,51 @@
+{
+  "feature_cols": [
+    "claim_type",
+    "claim_form_type",
+    "coverage_type",
+    "provider_network_status",
+    "place_of_service_code",
+    "claim_category",
+    "is_facility_claim_flag",
+    "total_billed_amount",
+    "line_count",
+    "is_cob_secondary_flag",
+    "provider_type",
+    "primary_specialty",
+    "utilization_cohort",
+    "risk_score",
+    "primary_segment",
+    "procedure_category",
+    "typical_setting",
+    "provider_trailing_slow_rate",
+    "network_status_trailing_slow_rate"
+  ],
+  "target": "is_slow_payment",
+  "target_id": "payment_delay_risk",
+  "task": "binary",
+  "metrics": {
+    "roc_auc": 0.567583401025739,
+    "pr_auc": 0.24511410825251156,
+    "brier": 0.10711101244472696,
+    "base_rate": 0.128
+  },
+  "feature_importance": {
+    "risk_score": 70.0,
+    "provider_trailing_slow_rate": 58.0,
+    "total_billed_amount": 56.0,
+    "primary_specialty": 15.0,
+    "line_count": 12.0,
+    "claim_type": 11.0,
+    "provider_network_status": 11.0,
+    "network_status_trailing_slow_rate": 9.0,
+    "procedure_category": 8.0,
+    "place_of_service_code": 6.0,
+    "claim_category": 6.0,
+    "claim_form_type": 3.0,
+    "utilization_cohort": 2.0,
+    "typical_setting": 1.0,
+    "is_facility_claim_flag": 1.0
+  },
+  "trained_at": "2026-09-14T05:28:50.819210+00:00",
+  "lightgbm_version": "4.7.0"
+}

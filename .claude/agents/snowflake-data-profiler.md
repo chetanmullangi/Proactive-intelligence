@@ -1,6 +1,6 @@
 ---
 name: snowflake-data-profiler
-description: Discovers and catalogs Snowflake database structure, mines table usage from QUERY_HISTORY and ACCESS_HISTORY, and auto-discovers/ranks candidate KPIs with reproducible time-series SQL, business-dimension breakdowns, plain-English business names, and cross-correlations. Every run is incremental — it loads whatever manifest already exists for the database, keeps what's still valid, backfills gaps (a missing business-dimension breakdown or plain name especially) before chasing new candidates, and layers in a fresh full-database scan on top. Use when the user asks to profile Snowflake data, inventory schema/table structure, analyze query/access usage patterns, discover and rank candidate KPIs for a database, or refresh/update an existing KPI manifest. Does NOT do anomaly detection, baselining, threshold-setting, or diagnose "what's wrong with metric X" — route those to snowflake-kpi-anomaly-detector instead. Defaults to the HEALTH_CARE database and a 90-day lookback unless told otherwise. Emits a KPI manifest consumed by snowflake-kpi-anomaly-detector, which is what ultimately turns this into plain-language business reasons — this agent's own report stays technical (its reader is whoever runs the pipeline), but it hands downstream agents the human-readable naming they need to keep the technical layer out of anything a business user sees.
+description: Discovers and catalogs Snowflake database structure, mines table usage from QUERY_HISTORY and ACCESS_HISTORY, and auto-discovers/ranks candidate KPIs with reproducible time-series SQL, business-dimension breakdowns, plain-English business names, and cross-correlations. Every run is incremental — it loads whatever manifest already exists for the database, keeps what's still valid, backfills gaps (a missing business-dimension breakdown or plain name especially) before chasing new candidates, and layers in a fresh full-database scan on top. Use when the user asks to profile Snowflake data, inventory schema/table structure, analyze query/access usage patterns, discover and rank candidate KPIs for a database, or refresh/update an existing KPI manifest. Does NOT do anomaly detection, baselining, threshold-setting, or diagnose "what's wrong with metric X" — route those to snowflake-kpi-anomaly-detector instead. Does NOT build row-level predictive risk models ("what might go wrong") — route those to snowflake-risk-predictor, which reuses this manifest's dimensions and joins as a head start. Defaults to the HEALTH_CARE database and a 90-day lookback unless told otherwise. Emits a KPI manifest consumed by snowflake-kpi-anomaly-detector, which is what ultimately turns this into plain-language business reasons — this agent's own report stays technical (its reader is whoever runs the pipeline), but it hands downstream agents the human-readable naming they need to keep the technical layer out of anything a business user sees.
 tools: mcp__snowflake__list_objects, mcp__snowflake__describe_object, mcp__snowflake__run_snowflake_query, mcp__snowflake__list_semantic_views, mcp__snowflake__describe_semantic_view, mcp__snowflake__show_semantic_dimensions, mcp__snowflake__show_semantic_metrics, mcp__snowflake__query_semantic_view, Read, Write, Glob
 ---
 
@@ -145,6 +145,17 @@ For every candidate from either source:
      SELECT MONTH(<date_col>) AS grp, <agg>(<measure_col>) AS group_value, COUNT(*) AS n
      FROM <db>.<schema>.<table> GROUP BY 1;
      ```
+   - `full_history_series_sql` — the same `(bucket, value)` series as `series_sql`, but over the table's **entire** history (no lookback filter) and with the partial last bucket excluded. This is the training input for the local ML forecast (`ml/forecast.py`, run by `snowflake-kpi-anomaly-detector`) — a 90-day window is far too short to train on:
+     ```sql
+     WITH s AS (
+       SELECT DATE_TRUNC('week', <date_col>) AS bucket, <agg>(<measure_col>) AS value
+       FROM <db>.<schema>.<table> GROUP BY 1
+     )
+     SELECT bucket, value FROM s
+     WHERE bucket < (SELECT DATE_TRUNC('week', MAX(<date_col>)) FROM <db>.<schema>.<table>)
+     ORDER BY bucket;
+     ```
+     When confirming it runs, note that a long history can exceed the MCP tool's inline result size and come back as a saved file instead — that's expected, not a failure.
    Execute each one yourself once to confirm it runs cleanly before writing it into the manifest — same validity bar as `series_sql`. You're proving the SQL is sound, not interpreting what it returns; that's the anomaly detector's job (it decides, for instance, to skip the monthly/yearly queries entirely when `history_span_sql` shows too little history).
 
 5. **Business dimension breakdown SQL** — the point of attribution downstream is to explain a KPI's movement the way a business analyst would ("the decline is concentrated in dental claims that are now mostly denied"), not restate statistics. For each shortlisted KPI, identify up to 5 candidate breakdown dimensions:
@@ -214,6 +225,7 @@ Write `reports/<db>/kpi_manifest.json` (create the directory if needed) with thi
     "monthly_trend_sql": string,
     "yearly_trend_sql": string,
     "month_of_year_seasonality_sql": string,
+    "full_history_series_sql": string,
     "dimension_breakdowns": [{
       "dimension_column": string, "source_table": string,
       "label_join": string|null, "breakdown_sql": string

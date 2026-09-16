@@ -1,0 +1,41 @@
+{
+  "feature_cols": [
+    "is_mail_order_flag",
+    "days_supply",
+    "quantity_dispensed",
+    "refill_number",
+    "coverage_type",
+    "billed_amount",
+    "therapeutic_class",
+    "brand_generic_status",
+    "formulary_tier",
+    "is_specialty_flag",
+    "pharmacy_trailing_reject_rate",
+    "class_trailing_reject_rate"
+  ],
+  "target": "is_rejected",
+  "target_id": "pharmacy_reject_risk",
+  "task": "binary",
+  "metrics": {
+    "roc_auc": 0.5684491932604665,
+    "pr_auc": 0.009574796694730579,
+    "brier": 0.0065273325470064664,
+    "base_rate": 0.0065
+  },
+  "feature_importance": {
+    "billed_amount": 857.0,
+    "pharmacy_trailing_reject_rate": 493.0,
+    "refill_number": 285.0,
+    "class_trailing_reject_rate": 181.0,
+    "quantity_dispensed": 147.0,
+    "therapeutic_class": 71.0,
+    "days_supply": 69.0,
+    "is_mail_order_flag": 32.0,
+    "coverage_type": 18.0,
+    "brand_generic_status": 5.0,
+    "formulary_tier": 2.0,
+    "is_specialty_flag": 0.0
+  },
+  "trained_at": "2026-09-14T05:29:42.177265+00:00",
+  "lightgbm_version": "4.7.0"
+}

@@ -5,6 +5,8 @@ export function fmt(kpi, v) {
       return (v * 100).toFixed(1) + '%'
     case 'days':
       return v.toFixed(3) + ' d'
+    case 'rate1':
+      return v.toFixed(1)
     case 'usd':
       return '$' + Math.round(v).toLocaleString('en-US')
     default:

@@ -1,8 +1,8 @@
 {
   "database": "HEALTH_CARE",
-  "generated_at": "2026-09-11T06:30:00-07:00",
+  "generated_at": "2026-09-16T10:49:36.872Z",
   "lookback_days": 90,
-  "discovery_note": "CHANGELOG this run (incremental, per Phase 0): (1) Full-database rescan added 2 new KPIs the old hand-picked 5-table scope would have missed: main.dim_provider.count_star, main.bridge_provider_network.count_star. (2) Usage-driven discovery (ACCESS_HISTORY) ran but was entirely self-referential to this session's own queries -- this account has no organic business traffic yet, so it confirmed existing picks rather than discriminating among them. (3) Backfilled dimension_breakdowns for 5 previously-gapped KPIs (main.medical_claim_header.count_star / sum_total_billed_amount / sum_total_allowed_amount / sum_total_plan_paid_amount / avg_is_denied) plus main.fact_claim_payment.count_star, bringing coverage from 3/15 to 8/15 KPIs with a real business-dimension breakdown. Fixed a real bug found while doing this: the breakdown template compared a 4-week 'recent' window against a ~9-week 'rest of lookback' baseline, biasing raw totals -- now 4-vs-4 equal windows in the template and in every breakdown_sql this run. STILL GAPPED (7 of 15, priority for next run): main.medical_claim_line.count_star, main.medical_claim_line.sum_plan_paid_amount, main.fact_encounter.count_star, main.fact_encounter.avg_length_of_stay_days, main.fact_claim_payment.sum_paid_amount (note: can likely reuse fact_claim_payment.count_star's CLAIM_TYPE breakdown directly, cheapest win available), main.pharmacy_claim.count_star, main.pharmacy_claim.sum_plan_paid_amount.",
+  "discovery_note": "Pass 9 (2026-09-16): repaired a corrupted manifest left by a crashed prior run (truncated JSON + 3 unmerged fragment files from a response that exceeded the 64K-output-token ceiling while merging), and completed the remaining table-coverage gap. Merged in: 5 MART_* tables profiled with the same lookback-grain fix already applied to FACT_PREMIUM/FACT_MEMBER_MONTH/MEMBER_ELIGIBILITY (year-grain for the 4 annual marts, cast+30-month window for MART_PMPM_PLAN_MONTH's text YEAR_MONTH), adding 7 new KPIs (main.mart_utilization_per_1000.er_visits_per_1000, .inpatient_admits_per_1000, main.mart_provider_year_summary.weighted_denial_rate, main.mart_member_year_summary.pmpm, main.mart_pharmacy_class_year.sum_plan_paid_amount, .sum_script_count, main.mart_pmpm_plan_month.pmpm_total_healthcare_cost). Re-confirmed DIM_MEMBER_GROUP (104 rows), DIM_NETWORK (6 rows), DIM_BENEFIT_STRUCTURE (16 rows), and AUDIT_LOAD_LOG (zero time variance) are correctly excluded. Total: 29 KPIs (up from 22), 4 correlations, 10 skipped entries (down from prior counts as MART candidates resolved into either real KPIs or confirmed rejections). The 7 pre-existing KPIs still missing a dimension_breakdowns entry (medical_claim_line.count_star, medical_claim_line.sum_plan_paid_amount, fact_encounter.count_star, fact_encounter.avg_length_of_stay_days, fact_claim_payment.sum_paid_amount, pharmacy_claim.count_star, pharmacy_claim.sum_plan_paid_amount) remain gapped -- out of scope for this repair pass, next priority for a future incremental run.",
   "kpis": [
     {
       "kpi_id": "main.medical_claim_header.count_star",
@@ -14,7 +14,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.78,
-      "score_rationale": "Core claim-volume KPI on the largest header table; native-grain r2=0.05 (flat), but month-grain r2=0.83 shows strong real growth over the full history.",
+      "score_rationale": "Core claim-volume KPI; month-grain r2=0.83 real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -30,7 +30,7 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ORIGINAL: 1280->1409 claims (delta +129); RESUBMISSION: 63->84 (+21); REVERSAL: 45->40 (-5); REPLACEMENT: 45->40 (-5); DUPLICATE_SUBMISSION: 7->7 (0). No dominant driver of claim count -- it's genuinely stable, consistent with the flat native-grain trend."
+          "result_preview": "ORIGINAL +129; RESUBMISSION +21; REVERSAL -5; REPLACEMENT -5. No dominant driver, genuinely stable."
         }
       ],
       "buckets_available": 14,
@@ -60,7 +60,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.85,
-      "score_rationale": "Primary cost KPI; native-grain has one extreme spike week (robust z ~4.1 at 2026-05-04); month-grain r2=0.72 confirms real long-run growth underneath.",
+      "score_rationale": "Primary cost KPI; month r2=0.72 real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -76,7 +76,7 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, TOTAL_BILLED_AMOUNT AS m, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "REVERSAL/REPLACEMENT pair swung the most (-$208,530 / +$208,530 -- an offsetting reversal+rebill, not a real net change). ORIGINAL billed amount was roughly flat (+$128,127 on a ~$3.4M base). No single category explains a real net decline here -- this KPI's native-grain state is genuinely stable/volatile-noise, not a clear business-driven shift."
+          "result_preview": "REVERSAL/REPLACEMENT offsetting swing; ORIGINAL roughly flat (+$128K). No single category explains a real net decline."
         }
       ],
       "buckets_available": 14,
@@ -106,7 +106,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.75,
-      "score_rationale": "Same spike pattern as billed amount (robust z ~9.8 at 2026-05-04); month-grain r2=0.73 shows real long-run growth.",
+      "score_rationale": "Month r2=0.73 real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -122,7 +122,7 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, TOTAL_ALLOWED_AMOUNT AS m, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ORIGINAL claims' allowed amount fell -$176,812 (baseline $1,497,156 -> recent $1,320,345) despite claim count for ORIGINAL rising (+129) -- allowed-per-claim is genuinely dropping, i.e. adjudication is allowing less per claim recently, not just processing fewer claims. REPLACEMENT/REVERSAL pair offsets (+$87,058/-$74,592) partially net out. Worth flagging as a real, moderate finding even though the native-grain KPI reads as flat overall."
+          "result_preview": "ORIGINAL allowed amount fell -$176.8K despite claim count rising -- allowed-per-claim genuinely dropping."
         }
       ],
       "buckets_available": 14,
@@ -152,7 +152,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.75,
-      "score_rationale": "Same spike pattern (robust z ~13.0 at 2026-05-04); month-grain r2=0.72 shows real long-run growth.",
+      "score_rationale": "Month r2=0.72 real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -168,7 +168,7 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, TOTAL_PLAN_PAID_AMOUNT AS m, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "Same pattern as allowed amount: ORIGINAL claims' plan-paid amount fell -$170,856 (baseline $1,320,751 -> recent $1,149,895) even as ORIGINAL claim count rose (+129) -- paid-per-claim is dropping, consistent with the allowed-amount finding on the same KPI family. REPLACEMENT/REVERSAL pair offsets (+$86,078/-$73,386) partially net out."
+          "result_preview": "Same pattern as allowed amount: ORIGINAL plan-paid fell -$170.9K even as ORIGINAL claim count rose."
         }
       ],
       "buckets_available": 14,
@@ -199,7 +199,7 @@
       "source": "discovered",
       "kpi_class": "error_rate",
       "score": 0.88,
-      "score_rationale": "Denial rate: flat at native (r2~0) and monthly (r2=0.10) grain, but a strong, real INCREASE year-over-year (r2=0.83) with no month-of-year seasonality to explain it away (checked: range 0.110-0.125 across all 12 calendar months, no cycle). A multi-year creep invisible at short grains.",
+      "score_rationale": "Flat native/month but strong real year-over-year increase (r2=0.83).",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -215,7 +215,7 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, IFF(CLAIM_STATUS='DENIED',1,0) AS m, PROVIDER_NETWORK_STATUS AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, AVG(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, AVG(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "OUT_OF_NETWORK denial rate: 15.9% -> 18.2% (+2.2pp) on growing volume (571->682 claims, 39.6%->43.2% share of all claims). IN_NETWORK denial rate: 7.9% -> 8.5% (+0.5pp), comparatively flat. OUT_OF_NETWORK claims deny at roughly 2x the IN_NETWORK rate AND are becoming a larger share of total volume -- a real, concrete network-mix-shift explanation that plausibly contributes to the year-over-year denial-rate creep (Standout finding 4). Strength: strong (clearly dominant, directionally consistent category in a 2-category breakdown)."
+          "result_preview": "OUT_OF_NETWORK denial rate 15.9%->18.2%; IN_NETWORK 7.9%->8.5%. OUT_OF_NETWORK denies ~2x IN_NETWORK and is growing share of volume."
         }
       ],
       "buckets_available": 14,
@@ -246,7 +246,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.72,
-      "score_rationale": "Line-level volume; r=0.972 with header claim count; month-grain r2=0.82 confirms real long-run growth.",
+      "score_rationale": "r=0.972 with header claim count; month r2=0.82 real growth.",
       "usage_label": "cold",
       "distinct_queries": 4,
       "distinct_users": 1,
@@ -283,7 +283,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.74,
-      "score_rationale": "r=0.941 with header billed amount; same 2026-05-04 spike; month-grain r2=0.72 confirms real long-run growth.",
+      "score_rationale": "r=0.941 with header billed amount; month r2=0.72 real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -308,7 +308,7 @@
         "year"
       ],
       "plain_name": "Line-Level Plan-Paid Amount",
-      "plain_description": "The total dollar amount paid out at the line-item level each week — should closely match the claim-level total."
+      "plain_description": "The total dollar amount paid out at the line-item level each week -- should closely match the claim-level total."
     },
     {
       "kpi_id": "main.fact_encounter.count_star",
@@ -320,7 +320,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.7,
-      "score_rationale": "r=0.984 with claim count; month-grain r2=0.84, the strongest monthly fit in the database.",
+      "score_rationale": "r=0.984 with claim count; month r2=0.84.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -357,7 +357,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.4,
-      "score_rationale": "Highest native-grain CV (0.62); ALSO no real signal at month (r2=0.006) or year (r2=0.098) grain — confirms this is just noise at every timescale, not merely a native-grain artifact. Lowered priority vs. the earlier run given this multi-grain confirmation.",
+      "score_rationale": "No signal at any timescale (month r2=0.006, year r2=0.098) -- noise.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -394,7 +394,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.95,
-      "score_rationale": "IMPORTANT DIVERGENCE: native-grain (90-day) shows a real DECLINE (r2=0.39, slope negative), but month-grain (r2=0.54) and year-grain (r2=0.60) over the full history both show real GROWTH (slopes positive). The recent decline bucks a 6-year growth trend — more concerning than either number alone, not less.",
+      "score_rationale": "DIVERGENCE: native 90-day shows real DECLINE (r2=0.39) but month (r2=0.54) and year (r2=0.60) over full history both show real GROWTH -- recent decline bucks a 6-year growth trend.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -431,7 +431,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.97,
-      "score_rationale": "TOP FINDING, confirmed by multi-grain: native-grain r2=0.70 DECLINE over the last 13 weeks, while month-grain (r2=0.45) and year-grain (r2=0.37) over the full 6+ year history both show real GROWTH. This is a genuine recent reversal against a long-standing upward trend, not just noise reverting to a stable mean — the strongest anomaly signal in this database. Now has a real business-dimension breakdown (see dimension_breakdowns) rather than statistical-only attribution.",
+      "score_rationale": "TOP FINDING: native r2=0.70 DECLINE over last 13 weeks while month (r2=0.45) and year (r2=0.37) over full history show real GROWTH -- genuine recent reversal against a long-standing trend, strongest anomaly signal in this database.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -445,9 +445,9 @@
         {
           "dimension_column": "CLAIM_TYPE",
           "source_table": "FACT_CLAIM_PAYMENT joined to MEDICAL_CLAIM_HEADER via CLAIM_ID",
-          "label_join": "MEDICAL_CLAIM_HEADER.CLAIM_TYPE (already human-readable: ORIGINAL/REPLACEMENT/REVERSAL/RESUBMISSION)",
+          "label_join": "MEDICAL_CLAIM_HEADER.CLAIM_TYPE",
           "breakdown_sql": "WITH tbl AS (SELECT p.PAYMENT_DATE AS d, p.PAID_AMOUNT AS m, h.CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT p LEFT JOIN HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER h ON h.CLAIM_ID = p.CLAIM_ID), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT COALESCE(cat,'(no matching header record)') AS cat, COUNT(*) AS n, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT COALESCE(cat,'(no matching header record)') AS cat, COUNT(*) AS n, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ORIGINAL: 1006->466 payments ($1,143,309->$598,554, delta -$544,755); REPLACEMENT: 35->42 ($38,953->$126,800, delta +$87,846); REVERSAL: 36->40 (-$40,685->-$116,892, delta -$76,207); RESUBMISSION: 54->66 ($39,374->$76,822, delta +$37,447). ORIGINAL alone accounts for ~110% of the net ~$495,668 decline (other categories partially offset it) -- strong evidence per the >=50%-of-total-change bar."
+          "result_preview": "ORIGINAL alone accounts for ~110% of the net ~$495.7K decline (other categories partially offset it) -- strong evidence."
         }
       ],
       "buckets_available": 13,
@@ -477,7 +477,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.6,
-      "score_rationale": "Mild real native-grain uptrend (r2=0.20); month-grain r2=0.62 confirms consistent real growth, year-grain weaker (r2=0.18, only 7 noisy year-buckets).",
+      "score_rationale": "Mild real native uptrend (r2=0.20); month r2=0.62 confirms consistent real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -514,7 +514,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.5,
-      "score_rationale": "Noisiest native-grain KPI (CV=0.28, r2=0.05); month-grain r2=0.32 (moderate) confirms some real growth underneath, weaker than script count's monthly fit.",
+      "score_rationale": "Noisiest native KPI (CV=0.28); month r2=0.32 moderate, confirms some real growth.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -551,7 +551,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.42,
-      "score_rationale": "New this pass via full-database structural scan (previous run only checked 5 hand-picked 'big' tables and never considered DIM_PROVIDER). Real historical date spread (2011-2019, 401 distinct weeks), moderate volume (3,079 rows). No non-self-referential usage evidence found in ACCESS_HISTORY this pass — this account has near-zero organic query traffic, so usage-driven scoring mostly confirms prior structural picks rather than discriminating; scored on structure/signal alone.",
+      "score_rationale": "Full-database structural scan find; real historical spread (2011-2019, 401 distinct weeks); no organic usage evidence, scored on structure/signal alone.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -567,7 +567,7 @@
           "source_table": "DIM_PROVIDER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT ENROLLMENT_DATE AS d, PROVIDER_TYPE AS cat FROM HEALTH_CARE.MAIN.DIM_PROVIDER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "SPECIALIST enrollments: 4->16 (delta +12, the largest single mover on very low base volume). All other provider types move by 1-3 enrollments. At this volume (single digits to low teens per 4-week window), no category shift is statistically meaningful -- consistent with the KPI's own flat/no-signal classification."
+          "result_preview": "SPECIALIST enrollments +12 (largest, low base). All others move 1-3. No category shift meaningful at this volume."
         }
       ],
       "buckets_available": 14,
@@ -597,7 +597,7 @@
       "grain": "week",
       "source": "discovered",
       "score": 0.48,
-      "score_rationale": "New this pass via full-database structural scan — BRIDGE_PROVIDER_NETWORK was entirely outside the previous run's hand-picked 5-table scope. Real historical spread (2017-2020, 130 distinct weeks), decent volume (11,282 rows), stable weekly pattern (~85-97/week baseline). No non-self-referential usage evidence in ACCESS_HISTORY this pass.",
+      "score_rationale": "Full-database structural scan find; real historical spread (2017-2020, 130 distinct weeks); stable weekly pattern.",
       "usage_label": "cold",
       "distinct_queries": 0,
       "distinct_users": 0,
@@ -613,7 +613,7 @@
           "source_table": "BRIDGE_PROVIDER_NETWORK",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT EFFECTIVE_DATE AS d, PARTICIPATION_STATUS AS cat FROM HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "PARTICIPATING: 314->325 (+11); TERMINATED: 36->37 (+1). Both essentially flat -- no meaningful mix shift, consistent with the KPI's own flat classification."
+          "result_preview": "PARTICIPATING +11; TERMINATED +1. Both essentially flat."
         }
       ],
       "buckets_available": 14,
@@ -630,8 +630,660 @@
         "month",
         "year"
       ],
-      "plain_name": "Provider–Network Contracts",
+      "plain_name": "Provider-Network Contracts",
       "plain_description": "How many active provider-network contracts exist."
+    },
+    {
+      "kpi_id": "main.fact_premium.sum_billed_premium_amount",
+      "schema": "MAIN",
+      "table": "FACT_PREMIUM",
+      "measure_column": "BILLED_PREMIUM_AMOUNT",
+      "aggregation": "SUM",
+      "date_column": "COVERAGE_MONTH",
+      "grain": "month",
+      "source": "discovered",
+      "score": 0.72,
+      "score_rationale": "Monthly-grain premium billing; 30-month lookback yields 31 buckets; strong real growth (month r2=0.97). Jan-Jun vs Jul-Dec seasonality split is a partial-2026-year artifact, not a real cycle.",
+      "usage_label": "cold",
+      "distinct_queries": 21,
+      "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(month,-30, MAX(COVERAGE_MONTH)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_PREMIUM) SELECT DATE_TRUNC('month', COVERAGE_MONTH) AS bucket, SUM(BILLED_PREMIUM_AMOUNT) AS value FROM HEALTH_CARE.MAIN.FACT_PREMIUM, bounds WHERE COVERAGE_MONTH >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(COVERAGE_MONTH), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_PREMIUM;",
+      "history_span_sql": "SELECT MIN(COVERAGE_MONTH) AS min_dt, MAX(COVERAGE_MONTH) AS max_dt, DATEDIFF(day, MIN(COVERAGE_MONTH), MAX(COVERAGE_MONTH)) AS span_days FROM HEALTH_CARE.MAIN.FACT_PREMIUM;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', COVERAGE_MONTH) AS bucket, SUM(BILLED_PREMIUM_AMOUNT) AS value FROM HEALTH_CARE.MAIN.FACT_PREMIUM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', COVERAGE_MONTH) AS bucket, SUM(BILLED_PREMIUM_AMOUNT) AS value FROM HEALTH_CARE.MAIN.FACT_PREMIUM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(COVERAGE_MONTH) AS grp, SUM(BILLED_PREMIUM_AMOUNT) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_PREMIUM GROUP BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "COVERAGE_TYPE",
+          "source_table": "FACT_PREMIUM",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT COVERAGE_MONTH AS d, BILLED_PREMIUM_AMOUNT AS m, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_PREMIUM), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "All 4 coverage types grew: MEDICARE +$1.78M (largest); COMMERCIAL +$723K; EXCHANGE +$365K; MEDICAID +$101K. Broad-based growth, MEDICARE largest and fastest."
+        }
+      ],
+      "buckets_available": 31,
+      "pct_change_recent": 6.23,
+      "trend_flag": "rising",
+      "days_stale": 106,
+      "span_days": 2343,
+      "month_slope": 20888.84,
+      "month_r2": 0.9722,
+      "year_slope": 1566393.35,
+      "year_r2": 0.395,
+      "month_of_year_seasonal": true,
+      "grains_tested": [
+        "month",
+        "year"
+      ],
+      "plain_name": "Premium Billed Amount",
+      "plain_description": "The total dollar amount of health insurance premiums billed to members each month."
+    },
+    {
+      "kpi_id": "main.fact_premium.count_star",
+      "schema": "MAIN",
+      "table": "FACT_PREMIUM",
+      "measure_column": "*",
+      "aggregation": "COUNT",
+      "date_column": "COVERAGE_MONTH",
+      "grain": "month",
+      "source": "discovered",
+      "score": 0.6,
+      "score_rationale": "Companion volume KPI; strong monthly fit (r2=0.96); yearly fit weak due to partial 2026 (data-horizon artifact, not evidence against trend).",
+      "usage_label": "cold",
+      "distinct_queries": 21,
+      "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(month,-30, MAX(COVERAGE_MONTH)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_PREMIUM) SELECT DATE_TRUNC('month', COVERAGE_MONTH) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_PREMIUM, bounds WHERE COVERAGE_MONTH >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(COVERAGE_MONTH), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_PREMIUM;",
+      "history_span_sql": "SELECT MIN(COVERAGE_MONTH) AS min_dt, MAX(COVERAGE_MONTH) AS max_dt, DATEDIFF(day, MIN(COVERAGE_MONTH), MAX(COVERAGE_MONTH)) AS span_days FROM HEALTH_CARE.MAIN.FACT_PREMIUM;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', COVERAGE_MONTH) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_PREMIUM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', COVERAGE_MONTH) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_PREMIUM GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(COVERAGE_MONTH) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_PREMIUM GROUP BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "COVERAGE_TYPE",
+          "source_table": "FACT_PREMIUM",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT COVERAGE_MONTH AS d, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_PREMIUM), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "COMMERCIAL +845 (largest); MEDICARE +641; MEDICAID +412; EXCHANGE +294. Broad-based growth across all segments."
+        }
+      ],
+      "buckets_available": 31,
+      "pct_change_recent": 0.99,
+      "trend_flag": "rising",
+      "days_stale": 106,
+      "span_days": 2343,
+      "month_slope": 10.89,
+      "month_r2": 0.9587,
+      "year_slope": 140.14,
+      "year_r2": 0.0049,
+      "month_of_year_seasonal": true,
+      "grains_tested": [
+        "month",
+        "year"
+      ],
+      "plain_name": "Billed Member-Months",
+      "plain_description": "How many member-months of premium were billed each month -- a measure of how many members had active, billed coverage."
+    },
+    {
+      "kpi_id": "main.fact_member_month.count_star",
+      "schema": "MAIN",
+      "table": "FACT_MEMBER_MONTH",
+      "measure_column": "*",
+      "aggregation": "COUNT",
+      "date_column": "MONTH_START_DATE",
+      "grain": "month",
+      "source": "discovered",
+      "score": 0.68,
+      "score_rationale": "Core enrollment denominator behind PMPM/utilization-per-1000; 30-month lookback, 31 buckets; strong real growth (month r2=0.96).",
+      "usage_label": "cold",
+      "distinct_queries": 14,
+      "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(month,-30, MAX(MONTH_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH) SELECT DATE_TRUNC('month', MONTH_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH, bounds WHERE MONTH_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(MONTH_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH;",
+      "history_span_sql": "SELECT MIN(MONTH_START_DATE) AS min_dt, MAX(MONTH_START_DATE) AS max_dt, DATEDIFF(day, MIN(MONTH_START_DATE), MAX(MONTH_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', MONTH_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', MONTH_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(MONTH_START_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH GROUP BY 1;",
+      "full_history_series_sql": "WITH s AS (SELECT DATE_TRUNC('month', MONTH_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH GROUP BY 1) SELECT bucket, value FROM s WHERE bucket < (SELECT DATE_TRUNC('month', MAX(MONTH_START_DATE)) FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH) ORDER BY bucket;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "COVERAGE_TYPE",
+          "source_table": "FACT_MEMBER_MONTH",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT MONTH_START_DATE AS d, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "COMMERCIAL +839 (largest); MEDICARE +639; MEDICAID +406; EXCHANGE +290. Broad-based growth matching FACT_PREMIUM pattern."
+        }
+      ],
+      "buckets_available": 31,
+      "pct_change_recent": 0.94,
+      "trend_flag": "rising",
+      "days_stale": 106,
+      "span_days": 2343,
+      "month_slope": 10.73,
+      "month_r2": 0.9594,
+      "year_slope": 137.89,
+      "year_r2": 0.0049,
+      "month_of_year_seasonal": true,
+      "grains_tested": [
+        "month",
+        "year"
+      ],
+      "plain_name": "Enrolled Member-Months",
+      "plain_description": "How many months of active member enrollment were recorded each month -- the core measure of how many members had health coverage in force."
+    },
+    {
+      "kpi_id": "main.member_eligibility.count_star",
+      "schema": "MAIN",
+      "table": "MEMBER_ELIGIBILITY",
+      "measure_column": "*",
+      "aggregation": "COUNT",
+      "date_column": "EFFECTIVE_DATE",
+      "grain": "month",
+      "source": "discovered",
+      "score": 0.65,
+      "score_rationale": "30-month lookback, 31 buckets; native/month trend flat (r2=0.0004, January dominates every year) but year-grain shows real strong growth (r2=0.90). Extreme genuine January-renewal seasonality.",
+      "usage_label": "cold",
+      "distinct_queries": 0,
+      "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(month,-30, MAX(EFFECTIVE_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY) SELECT DATE_TRUNC('month', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY, bounds WHERE EFFECTIVE_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(EFFECTIVE_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY;",
+      "history_span_sql": "SELECT MIN(EFFECTIVE_DATE) AS min_dt, MAX(EFFECTIVE_DATE) AS max_dt, DATEDIFF(day, MIN(EFFECTIVE_DATE), MAX(EFFECTIVE_DATE)) AS span_days FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(EFFECTIVE_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY GROUP BY 1;",
+      "full_history_series_sql": "WITH s AS (SELECT DATE_TRUNC('month', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY GROUP BY 1) SELECT bucket, value FROM s WHERE bucket < (SELECT DATE_TRUNC('month', MAX(EFFECTIVE_DATE)) FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY) ORDER BY bucket;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "COVERAGE_TYPE",
+          "source_table": "MEMBER_ELIGIBILITY",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT EFFECTIVE_DATE AS d, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "All 4 coverage types show large negative deltas -- but this is a seasonal-window artifact (baseline window captured the Jan 2026 renewal spike, recent window did not), not a real decline. Rely on month_of_year_seasonality_sql/yearly_trend_sql instead."
+        }
+      ],
+      "buckets_available": 31,
+      "pct_change_recent": -92.61,
+      "trend_flag": "volatile",
+      "days_stale": 106,
+      "span_days": 2343,
+      "month_slope": 0.441,
+      "month_r2": 0.0004,
+      "year_slope": 127.5,
+      "year_r2": 0.904,
+      "month_of_year_seasonal": true,
+      "grains_tested": [
+        "month",
+        "year"
+      ],
+      "plain_name": "New & Renewed Eligibility Records",
+      "plain_description": "How many member eligibility records -- new enrollments, annual renewals, and plan or group changes -- took effect each month."
+    },
+    {
+      "kpi_id": "main.fact_claim_diagnosis.count_star",
+      "schema": "MAIN",
+      "table": "FACT_CLAIM_DIAGNOSIS",
+      "measure_column": "*",
+      "aggregation": "COUNT",
+      "date_column": "SERVICE_START_DATE",
+      "grain": "week",
+      "source": "discovered",
+      "score": 0.62,
+      "score_rationale": "Native weekly grain, ample history, 14 clean buckets from standard 90-day lookback. Month r2=0.83 real growth tracking overall claim volume.",
+      "usage_label": "cold",
+      "distinct_queries": 8,
+      "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(SERVICE_START_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS) SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS, bounds WHERE SERVICE_START_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(SERVICE_START_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS;",
+      "history_span_sql": "SELECT MIN(SERVICE_START_DATE) AS min_dt, MAX(SERVICE_START_DATE) AS max_dt, DATEDIFF(day, MIN(SERVICE_START_DATE), MAX(SERVICE_START_DATE)) AS span_days FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(SERVICE_START_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS GROUP BY 1;",
+      "full_history_series_sql": "WITH s AS (SELECT DATE_TRUNC('week', SERVICE_START_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS GROUP BY 1) SELECT bucket, value FROM s WHERE bucket < (SELECT DATE_TRUNC('week', MAX(SERVICE_START_DATE)) FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS) ORDER BY bucket;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "DIAGNOSIS_TYPE",
+          "source_table": "FACT_CLAIM_DIAGNOSIS",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, DIAGNOSIS_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "SECONDARY +281 (larger); PRINCIPAL +144. Both grew roughly proportionally, no single type dominant."
+        },
+        {
+          "dimension_column": "DIAGNOSIS_CATEGORY",
+          "source_table": "FACT_CLAIM_DIAGNOSIS joined to REF_DIAGNOSIS via DIAGNOSIS_KEY",
+          "label_join": "REF_DIAGNOSIS.DIAGNOSIS_CATEGORY",
+          "breakdown_sql": "WITH tbl AS (SELECT f.SERVICE_START_DATE AS d, r.DIAGNOSIS_CATEGORY AS cat FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS f JOIN HEALTH_CARE.MAIN.REF_DIAGNOSIS r ON f.DIAGNOSIS_KEY = r.DIAGNOSIS_KEY), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "ENDOCRINE +77 (largest), RESPIRATORY +71, PREVENTIVE +60. Growth broad-based; NEOPLASM only notable decline (-11, small base)."
+        }
+      ],
+      "buckets_available": 14,
+      "pct_change_recent": -6.84,
+      "trend_flag": "flat",
+      "days_stale": 77,
+      "span_days": 2372,
+      "month_slope": 28.236,
+      "month_r2": 0.8308,
+      "year_slope": 1557.96,
+      "year_r2": 0.1477,
+      "month_of_year_seasonal": false,
+      "grains_tested": [
+        "native",
+        "month",
+        "year"
+      ],
+      "plain_name": "Diagnoses Recorded",
+      "plain_description": "How many diagnosis codes were recorded across all medical claims each week."
+    },
+    {
+      "kpi_id": "main.dim_member.count_star",
+      "schema": "MAIN",
+      "table": "DIM_MEMBER",
+      "measure_column": "*",
+      "aggregation": "COUNT",
+      "date_column": "RECORD_CREATED_DATE",
+      "grain": "week",
+      "source": "discovered",
+      "score": 0.55,
+      "score_rationale": "Confirmed by direct query: 14 clean weekly buckets from standard 90-day lookback. Real December enrollment spike (~2x other months), month r2=0.349.",
+      "usage_label": "cold",
+      "distinct_queries": 22,
+      "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(RECORD_CREATED_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.DIM_MEMBER) SELECT DATE_TRUNC('week', RECORD_CREATED_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_MEMBER, bounds WHERE RECORD_CREATED_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(RECORD_CREATED_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.DIM_MEMBER;",
+      "history_span_sql": "SELECT MIN(RECORD_CREATED_DATE) AS min_dt, MAX(RECORD_CREATED_DATE) AS max_dt, DATEDIFF(day, MIN(RECORD_CREATED_DATE), MAX(RECORD_CREATED_DATE)) AS span_days FROM HEALTH_CARE.MAIN.DIM_MEMBER;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', RECORD_CREATED_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_MEMBER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', RECORD_CREATED_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_MEMBER GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(RECORD_CREATED_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.DIM_MEMBER GROUP BY 1;",
+      "full_history_series_sql": "WITH s AS (SELECT DATE_TRUNC('week', RECORD_CREATED_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_MEMBER GROUP BY 1) SELECT bucket, value FROM s WHERE bucket < (SELECT DATE_TRUNC('week', MAX(RECORD_CREATED_DATE)) FROM HEALTH_CARE.MAIN.DIM_MEMBER) ORDER BY bucket;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "PRIMARY_SEGMENT",
+          "source_table": "DIM_MEMBER",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT RECORD_CREATED_DATE AS d, PRIMARY_SEGMENT AS cat FROM HEALTH_CARE.MAIN.DIM_MEMBER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "COMMERCIAL +13 (largest); EXCHANGE +12; MEDICAID -5; MEDICARE -4. Growth concentrated in COMMERCIAL/EXCHANGE, the fastest-growing segments elsewhere in this schema."
+        }
+      ],
+      "buckets_available": 14,
+      "pct_change_recent": -14.41,
+      "trend_flag": "volatile",
+      "days_stale": 2450,
+      "span_days": 398,
+      "month_slope": 8.347,
+      "month_r2": 0.3489,
+      "year_slope": 2538,
+      "year_r2": 1,
+      "month_of_year_seasonal": true,
+      "grains_tested": [
+        "native",
+        "month",
+        "year"
+      ],
+      "plain_name": "New Member Records",
+      "plain_description": "How many new member profile records were created each week."
+    },
+    {
+      "kpi_id": "main.dim_provider_location.count_star",
+      "schema": "MAIN",
+      "table": "DIM_PROVIDER_LOCATION",
+      "measure_column": "*",
+      "aggregation": "COUNT",
+      "date_column": "EFFECTIVE_DATE",
+      "grain": "week",
+      "source": "discovered",
+      "score": 0.4,
+      "score_rationale": "Standard 90-day lookback yields 14 clean weekly buckets. Month/year trend flat (r2=0.0005/0.018), consistent with other historical provider-build tables.",
+      "usage_label": "cold",
+      "distinct_queries": 8,
+      "distinct_users": 1,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(day,-90, MAX(EFFECTIVE_DATE)) AS start_dt FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION) SELECT DATE_TRUNC('week', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION, bounds WHERE EFFECTIVE_DATE >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, MAX(EFFECTIVE_DATE), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION;",
+      "history_span_sql": "SELECT MIN(EFFECTIVE_DATE) AS min_dt, MAX(EFFECTIVE_DATE) AS max_dt, DATEDIFF(day, MIN(EFFECTIVE_DATE), MAX(EFFECTIVE_DATE)) AS span_days FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(EFFECTIVE_DATE) AS grp, COUNT(*) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION GROUP BY 1;",
+      "full_history_series_sql": "WITH s AS (SELECT DATE_TRUNC('week', EFFECTIVE_DATE) AS bucket, COUNT(*) AS value FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION GROUP BY 1) SELECT bucket, value FROM s WHERE bucket < (SELECT DATE_TRUNC('week', MAX(EFFECTIVE_DATE)) FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION) ORDER BY bucket;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "STATE_CODE",
+          "source_table": "DIM_PROVIDER_LOCATION",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT EFFECTIVE_DATE AS d, STATE_CODE AS cat FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "NY +12 (largest); MI +10; OH +7. Small per-state counts consistent with noise, not a real geographic shift."
+        }
+      ],
+      "buckets_available": 14,
+      "pct_change_recent": 87.88,
+      "trend_flag": "volatile",
+      "days_stale": 2649,
+      "span_days": 2799,
+      "month_slope": -0.0099,
+      "month_r2": 0.0005,
+      "year_slope": 10,
+      "year_r2": 0.0178,
+      "month_of_year_seasonal": true,
+      "grains_tested": [
+        "native",
+        "month",
+        "year"
+      ],
+      "plain_name": "Provider Locations Added",
+      "plain_description": "How many new provider practice-location records became effective each week."
+    },
+    {
+      "kpi_id": "main.mart_utilization_per_1000.er_visits_per_1000",
+      "schema": "MAIN",
+      "table": "MART_UTILIZATION_PER_1000",
+      "measure_column": "ER_VISIT_COUNT / MEMBER_MONTH_COUNT (weighted, x12000)",
+      "aggregation": "AVG",
+      "date_column": "CALENDAR_YEAR",
+      "grain": "year",
+      "source": "discovered",
+      "score": 0.8,
+      "score_rationale": "Standard health-plan utilization-per-1000 KPI, already the mart's purpose; year r2=0.72 incl. partial 2026 (0.78 excl.); COVERAGE_TYPE breakdown shows increase concentrated in MEDICAID.",
+      "usage_label": "cold",
+      "distinct_queries": 3,
+      "distinct_users": 1,
+      "series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(ER_VISIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000 GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, DATE_FROM_PARTS(MAX(CALENDAR_YEAR),1,1), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000;",
+      "history_span_sql": "SELECT MIN(CALENDAR_YEAR) AS min_yr, MAX(CALENDAR_YEAR) AS max_yr, MAX(CALENDAR_YEAR)-MIN(CALENDAR_YEAR)+1 AS span_years FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000;",
+      "monthly_trend_sql": null,
+      "yearly_trend_sql": "WITH yearly AS (SELECT CALENDAR_YEAR AS yr, SUM(ER_VISIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000 GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY yr)-1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": null,
+      "month_of_year_not_applicable_reason": "Table has no sub-annual date column -- CALENDAR_YEAR is the only time dimension.",
+      "full_history_series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(ER_VISIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000 WHERE CALENDAR_YEAR < (SELECT MAX(CALENDAR_YEAR) FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000) GROUP BY 1 ORDER BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "COVERAGE_TYPE",
+          "source_table": "MART_UTILIZATION_PER_1000",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, COVERAGE_TYPE AS cat, ER_VISIT_COUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "3yr(2023-25) vs 3yr(2020-22): MEDICAID 161.6->223.4 (+61.8, largest); COMMERCIAL 193.7->229.4 (+35.8); EXCHANGE 182.8->213.8 (+31.0); MEDICARE 446.2->434.2 (-12.0, only decline)."
+        }
+      ],
+      "buckets_available": 7,
+      "pct_change_recent": 17.5,
+      "trend_flag": "rising",
+      "days_stale": 257,
+      "span_years": 7,
+      "year_slope": 11.004,
+      "year_r2": 0.722,
+      "year_slope_excl_partial": 13.81,
+      "year_r2_excl_partial": 0.7805,
+      "grains_tested": [
+        "year"
+      ],
+      "plain_name": "ER Visits per 1,000 Members",
+      "plain_description": "How many emergency-room visits happen each year for every 1,000 covered members."
+    },
+    {
+      "kpi_id": "main.mart_utilization_per_1000.inpatient_admits_per_1000",
+      "schema": "MAIN",
+      "table": "MART_UTILIZATION_PER_1000",
+      "measure_column": "INPATIENT_ADMIT_COUNT / MEMBER_MONTH_COUNT (weighted, x12000)",
+      "aggregation": "AVG",
+      "date_column": "CALENDAR_YEAR",
+      "grain": "year",
+      "source": "discovered",
+      "score": 0.78,
+      "score_rationale": "Standard health-plan inpatient-utilization KPI; year r2=0.74; some year-to-year volatility (2022 dip) but a real multi-year increase.",
+      "usage_label": "cold",
+      "distinct_queries": 3,
+      "distinct_users": 1,
+      "series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(INPATIENT_ADMIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000 GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, DATE_FROM_PARTS(MAX(CALENDAR_YEAR),1,1), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000;",
+      "history_span_sql": "SELECT MIN(CALENDAR_YEAR) AS min_yr, MAX(CALENDAR_YEAR) AS max_yr, MAX(CALENDAR_YEAR)-MIN(CALENDAR_YEAR)+1 AS span_years FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000;",
+      "monthly_trend_sql": null,
+      "yearly_trend_sql": "WITH yearly AS (SELECT CALENDAR_YEAR AS yr, SUM(INPATIENT_ADMIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000 GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY yr)-1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": null,
+      "month_of_year_not_applicable_reason": "Table has no sub-annual date column -- CALENDAR_YEAR is the only time dimension.",
+      "full_history_series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(INPATIENT_ADMIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000 WHERE CALENDAR_YEAR < (SELECT MAX(CALENDAR_YEAR) FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000) GROUP BY 1 ORDER BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "COVERAGE_TYPE",
+          "source_table": "MART_UTILIZATION_PER_1000",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, COVERAGE_TYPE AS cat, INPATIENT_ADMIT_COUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "3yr(2023-25) vs 3yr(2020-22): EXCHANGE 47.3->80.0 (+32.7, +69% -- largest relative mover); COMMERCIAL 62.5->80.8 (+18.3); MEDICARE 181.2->188.6 (+7.4); MEDICAID 61.6->58.1 (-3.5, only decline)."
+        }
+      ],
+      "buckets_available": 7,
+      "pct_change_recent": 21.93,
+      "trend_flag": "rising",
+      "days_stale": 257,
+      "span_years": 7,
+      "year_slope": 6.164,
+      "year_r2": 0.7436,
+      "grains_tested": [
+        "year"
+      ],
+      "plain_name": "Inpatient Admissions per 1,000 Members",
+      "plain_description": "How many hospital inpatient admissions happen each year for every 1,000 covered members."
+    },
+    {
+      "kpi_id": "main.mart_provider_year_summary.weighted_denial_rate",
+      "schema": "MAIN",
+      "table": "MART_PROVIDER_YEAR_SUMMARY",
+      "measure_column": "DENIED_CLAIM_COUNT / CLAIM_COUNT (claim-volume-weighted)",
+      "aggregation": "AVG",
+      "date_column": "CALENDAR_YEAR",
+      "grain": "year",
+      "source": "discovered",
+      "score": 0.85,
+      "score_rationale": "Provider-rollup denial rate cross-validates the same creep found at claim-header weekly grain (avg_is_denied); year r2=0.81, +7.0% recent-vs-baseline.",
+      "usage_label": "cold",
+      "distinct_queries": 4,
+      "distinct_users": 1,
+      "series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(DENIED_CLAIM_COUNT)*1.0/NULLIF(SUM(CLAIM_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, DATE_FROM_PARTS(MAX(CALENDAR_YEAR),1,1), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY;",
+      "history_span_sql": "SELECT MIN(CALENDAR_YEAR) AS min_yr, MAX(CALENDAR_YEAR) AS max_yr, MAX(CALENDAR_YEAR)-MIN(CALENDAR_YEAR)+1 AS span_years FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY;",
+      "monthly_trend_sql": null,
+      "yearly_trend_sql": "WITH yearly AS (SELECT CALENDAR_YEAR AS yr, SUM(DENIED_CLAIM_COUNT)*1.0/NULLIF(SUM(CLAIM_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY yr)-1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": null,
+      "month_of_year_not_applicable_reason": "Table has no sub-annual date column -- CALENDAR_YEAR is the only time dimension.",
+      "full_history_series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(DENIED_CLAIM_COUNT)*1.0/NULLIF(SUM(CLAIM_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY WHERE CALENDAR_YEAR < (SELECT MAX(CALENDAR_YEAR) FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY) GROUP BY 1 ORDER BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "PROVIDER_TYPE",
+          "source_table": "MART_PROVIDER_YEAR_SUMMARY",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, PROVIDER_TYPE AS cat, DENIED_CLAIM_COUNT AS num, CLAIM_COUNT AS denom FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(denom),0) AS val, SUM(denom) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(denom),0) AS val, SUM(denom) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "No single dominant driver across 18 provider types: ASC 17.1%->11.7% (-5.4pp, largest single mover, small base); HOME_HEALTH +3.0pp; DME +2.9pp; ANESTHESIA -2.8pp. Changes are spread across specialties, not concentrated."
+        }
+      ],
+      "buckets_available": 7,
+      "pct_change_recent": 7.02,
+      "trend_flag": "rising",
+      "days_stale": 257,
+      "span_years": 7,
+      "year_slope": 0.001944,
+      "year_r2": 0.8124,
+      "grains_tested": [
+        "year"
+      ],
+      "plain_name": "Provider Network Denial Rate",
+      "plain_description": "The share of claims across all providers that get denied each year, weighted by claim volume."
+    },
+    {
+      "kpi_id": "main.mart_member_year_summary.pmpm",
+      "schema": "MAIN",
+      "table": "MART_MEMBER_YEAR_SUMMARY",
+      "measure_column": "TOTAL_PAID_AMOUNT / MEMBER_MONTH_COUNT (weighted)",
+      "aggregation": "AVG",
+      "date_column": "CALENDAR_YEAR",
+      "grain": "year",
+      "source": "discovered",
+      "score": 0.88,
+      "score_rationale": "Standard per-member-per-month cost KPI (mart also carries a pre-computed PAID_PMPM column, cross-checked consistent); strongest fit this batch, year r2=0.86, +38% recent-vs-baseline.",
+      "usage_label": "cold",
+      "distinct_queries": 4,
+      "distinct_users": 1,
+      "series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(TOTAL_PAID_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, DATE_FROM_PARTS(MAX(CALENDAR_YEAR),1,1), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY;",
+      "history_span_sql": "SELECT MIN(CALENDAR_YEAR) AS min_yr, MAX(CALENDAR_YEAR) AS max_yr, MAX(CALENDAR_YEAR)-MIN(CALENDAR_YEAR)+1 AS span_years FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY;",
+      "monthly_trend_sql": null,
+      "yearly_trend_sql": "WITH yearly AS (SELECT CALENDAR_YEAR AS yr, SUM(TOTAL_PAID_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY yr)-1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": null,
+      "month_of_year_not_applicable_reason": "Table has no sub-annual date column -- CALENDAR_YEAR is the only time dimension.",
+      "full_history_series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(TOTAL_PAID_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY WHERE CALENDAR_YEAR < (SELECT MAX(CALENDAR_YEAR) FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY) GROUP BY 1 ORDER BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "PRIMARY_SEGMENT",
+          "source_table": "MART_MEMBER_YEAR_SUMMARY",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, PRIMARY_SEGMENT AS cat, TOTAL_PAID_AMOUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "3yr(2023-25) vs 3yr(2020-22): MEDICARE $1,615->$2,058 (+$443, largest absolute); EXCHANGE $310->$599 (+93%, largest relative); MEDICAID $408->$549 (+$141); COMMERCIAL $381->$513 (+$132). All segments rising."
+        }
+      ],
+      "buckets_available": 7,
+      "pct_change_recent": 38.25,
+      "trend_flag": "rising",
+      "days_stale": 257,
+      "span_years": 7,
+      "year_slope": 55.872,
+      "year_r2": 0.8633,
+      "grains_tested": [
+        "year"
+      ],
+      "plain_name": "Per-Member-Per-Month Cost (PMPM)",
+      "plain_description": "The average total amount paid per member per month each year -- a standard measure of how much it costs to cover each member."
+    },
+    {
+      "kpi_id": "main.mart_pharmacy_class_year.sum_plan_paid_amount",
+      "schema": "MAIN",
+      "table": "MART_PHARMACY_CLASS_YEAR",
+      "measure_column": "PLAN_PAID_AMOUNT",
+      "aggregation": "SUM",
+      "date_column": "CALENDAR_YEAR",
+      "grain": "year",
+      "source": "discovered",
+      "score": 0.82,
+      "score_rationale": "Total pharmacy plan-paid spend by year; raw 7pt r2=0.089 distorted by partial 2026, but excl.-partial 6yr fit r2=0.979 -- a very strong, real trend once the partial year is set aside.",
+      "usage_label": "cold",
+      "distinct_queries": 3,
+      "distinct_users": 1,
+      "series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, DATE_FROM_PARTS(MAX(CALENDAR_YEAR),1,1), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR;",
+      "history_span_sql": "SELECT MIN(CALENDAR_YEAR) AS min_yr, MAX(CALENDAR_YEAR) AS max_yr, MAX(CALENDAR_YEAR)-MIN(CALENDAR_YEAR)+1 AS span_years FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR;",
+      "monthly_trend_sql": null,
+      "yearly_trend_sql": "WITH yearly AS (SELECT CALENDAR_YEAR AS yr, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY yr)-1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": null,
+      "month_of_year_not_applicable_reason": "Table has no sub-annual date column -- CALENDAR_YEAR is the only time dimension.",
+      "full_history_series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(PLAN_PAID_AMOUNT) AS value FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR WHERE CALENDAR_YEAR < (SELECT MAX(CALENDAR_YEAR) FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR) GROUP BY 1 ORDER BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "THERAPEUTIC_CLASS",
+          "source_table": "MART_PHARMACY_CLASS_YEAR",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, THERAPEUTIC_CLASS AS cat, PLAN_PAID_AMOUNT AS m FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "Top movers (3yr vs 3yr): ORAL ONCOLYTICS +$1.79M (largest); GLP-1 AGONISTS +$0.94M; BIOLOGIC IMMUNOMODULATORS +$0.86M; HEMATOPOIETIC AGENTS +$0.26M; OPIOID DEPENDENCE +$0.13M. Consistent with well-documented specialty-drug and GLP-1 cost trends."
+        }
+      ],
+      "buckets_available": 7,
+      "pct_change_recent": 46.16,
+      "trend_flag": "rising",
+      "days_stale": 257,
+      "span_years": 7,
+      "year_slope": 154740.98,
+      "year_r2": 0.0887,
+      "year_slope_excl_partial": 535784.14,
+      "year_r2_excl_partial": 0.9787,
+      "grains_tested": [
+        "year"
+      ],
+      "plain_name": "Pharmacy Plan-Paid Spend",
+      "plain_description": "The total dollar amount the plan paid for prescription drugs each year."
+    },
+    {
+      "kpi_id": "main.mart_pharmacy_class_year.sum_script_count",
+      "schema": "MAIN",
+      "table": "MART_PHARMACY_CLASS_YEAR",
+      "measure_column": "SCRIPT_COUNT",
+      "aggregation": "SUM",
+      "date_column": "CALENDAR_YEAR",
+      "grain": "year",
+      "source": "discovered",
+      "score": 0.8,
+      "score_rationale": "Total prescriptions filled by year; same partial-2026 distortion as spend (raw r2=0.177, excl.-partial r2=0.997) -- a very strong real trend once isolated.",
+      "usage_label": "cold",
+      "distinct_queries": 3,
+      "distinct_users": 1,
+      "series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(SCRIPT_COUNT) AS value FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, DATE_FROM_PARTS(MAX(CALENDAR_YEAR),1,1), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR;",
+      "history_span_sql": "SELECT MIN(CALENDAR_YEAR) AS min_yr, MAX(CALENDAR_YEAR) AS max_yr, MAX(CALENDAR_YEAR)-MIN(CALENDAR_YEAR)+1 AS span_years FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR;",
+      "monthly_trend_sql": null,
+      "yearly_trend_sql": "WITH yearly AS (SELECT CALENDAR_YEAR AS yr, SUM(SCRIPT_COUNT) AS value FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY yr)-1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": null,
+      "month_of_year_not_applicable_reason": "Table has no sub-annual date column -- CALENDAR_YEAR is the only time dimension.",
+      "full_history_series_sql": "SELECT DATE_FROM_PARTS(CALENDAR_YEAR,1,1) AS bucket, SUM(SCRIPT_COUNT) AS value FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR WHERE CALENDAR_YEAR < (SELECT MAX(CALENDAR_YEAR) FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR) GROUP BY 1 ORDER BY 1;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "THERAPEUTIC_CLASS",
+          "source_table": "MART_PHARMACY_CLASS_YEAR",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, THERAPEUTIC_CLASS AS cat, SCRIPT_COUNT AS m FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "Top movers (3yr vs 3yr): OPIOID ANALGESICS +4,015 scripts (largest); STATINS +1,809; SSRI +1,747; CORTICOSTEROIDS +1,662; QUINOLONES +1,545. Broad-based volume growth across common maintenance-medication classes."
+        }
+      ],
+      "buckets_available": 7,
+      "pct_change_recent": 49.51,
+      "trend_flag": "rising",
+      "days_stale": 257,
+      "span_years": 7,
+      "year_slope": 967.964,
+      "year_r2": 0.1771,
+      "year_slope_excl_partial": 2581.457,
+      "year_r2_excl_partial": 0.9968,
+      "grains_tested": [
+        "year"
+      ],
+      "plain_name": "Prescriptions Filled",
+      "plain_description": "How many prescriptions (scripts) were filled across all drug classes each year."
+    },
+    {
+      "kpi_id": "main.mart_pmpm_plan_month.pmpm_total_healthcare_cost",
+      "schema": "MAIN",
+      "table": "MART_PMPM_PLAN_MONTH",
+      "measure_column": "TOTAL_HEALTHCARE_COST_AMOUNT / MEMBER_MONTH_COUNT (weighted)",
+      "aggregation": "AVG",
+      "date_column": "YEAR_MONTH (cast via TO_DATE(YEAR_MONTH||'-01'))",
+      "grain": "month",
+      "source": "discovered",
+      "score": 0.75,
+      "score_rationale": "Standard PMPM cost KPI on a pre-aggregated plan-month mart; fixed the text-YEAR_MONTH lookback-sizing bug by casting to a date and using a 30-month lookback (mirrors the FACT_PREMIUM/FACT_MEMBER_MONTH fix); month-grain full-history r2=0.505, year-grain r2=0.863 -- real multi-year cost growth despite noisy month-to-month swings; SEGMENT breakdown shows MEDICAID rising fastest.",
+      "usage_label": "cold",
+      "distinct_queries": 0,
+      "distinct_users": 0,
+      "series_sql": "WITH bounds AS (SELECT DATEADD(month,-30, TO_DATE(MAX(YEAR_MONTH)||'-01')) AS start_dt FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH) SELECT DATE_TRUNC('month', TO_DATE(YEAR_MONTH||'-01')) AS bucket, SUM(TOTAL_HEALTHCARE_COST_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH, bounds WHERE TO_DATE(YEAR_MONTH||'-01') >= bounds.start_dt GROUP BY 1 ORDER BY 1;",
+      "freshness_sql": "SELECT DATEDIFF(day, TO_DATE(MAX(YEAR_MONTH)||'-01'), CURRENT_DATE()) AS days_stale FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH;",
+      "history_span_sql": "SELECT TO_DATE(MIN(YEAR_MONTH)||'-01') AS min_dt, TO_DATE(MAX(YEAR_MONTH)||'-01') AS max_dt, DATEDIFF(day, TO_DATE(MIN(YEAR_MONTH)||'-01'), TO_DATE(MAX(YEAR_MONTH)||'-01')) AS span_days FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH;",
+      "monthly_trend_sql": "WITH monthly AS (SELECT DATE_TRUNC('month', TO_DATE(YEAR_MONTH||'-01')) AS bucket, SUM(TOTAL_HEALTHCARE_COST_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM monthly) SELECT REGR_SLOPE(value, idx) AS month_slope, REGR_R2(value, idx) AS month_r2, COUNT(*) AS month_buckets FROM indexed;",
+      "yearly_trend_sql": "WITH yearly AS (SELECT DATE_TRUNC('year', TO_DATE(YEAR_MONTH||'-01')) AS bucket, SUM(TOTAL_HEALTHCARE_COST_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH GROUP BY 1), indexed AS (SELECT ROW_NUMBER() OVER (ORDER BY bucket) - 1 AS idx, value FROM yearly) SELECT REGR_SLOPE(value, idx) AS year_slope, REGR_R2(value, idx) AS year_r2, COUNT(*) AS year_buckets FROM indexed;",
+      "month_of_year_seasonality_sql": "SELECT MONTH(TO_DATE(YEAR_MONTH||'-01')) AS grp, SUM(TOTAL_HEALTHCARE_COST_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS group_value, COUNT(*) AS n FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH GROUP BY 1;",
+      "full_history_series_sql": "WITH s AS (SELECT DATE_TRUNC('month', TO_DATE(YEAR_MONTH||'-01')) AS bucket, SUM(TOTAL_HEALTHCARE_COST_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0) AS value FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH GROUP BY 1) SELECT bucket, value FROM s WHERE bucket < (SELECT DATE_TRUNC('month', MAX(TO_DATE(YEAR_MONTH||'-01'))) FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH) ORDER BY bucket;",
+      "dimension_breakdowns": [
+        {
+          "dimension_column": "SEGMENT",
+          "source_table": "MART_PMPM_PLAN_MONTH",
+          "label_join": null,
+          "breakdown_sql": "WITH tbl AS (SELECT TO_DATE(YEAR_MONTH||'-01') AS d, SEGMENT AS cat, TOTAL_HEALTHCARE_COST_AMOUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
+          "result_preview": "Trailing-4-vs-prior-4-month: MEDICAID $402.9->$580.5 (+$177.6, largest); EXCHANGE $487.4->$574.0 (+$86.6); COMMERCIAL $577.9->$504.1 (-$73.8); MEDICARE $1686.6->$1620.1 (-$66.5). Growth concentrated in MEDICAID, partially offset by COMMERCIAL/MEDICARE declines."
+        }
+      ],
+      "buckets_available": 31,
+      "pct_change_recent": -1.65,
+      "trend_flag": "volatile",
+      "days_stale": 107,
+      "span_days": 2373,
+      "month_slope": 5.166,
+      "month_r2": 0.5049,
+      "year_slope": null,
+      "year_r2": null,
+      "grains_tested": [
+        "month"
+      ],
+      "plain_name": "Per-Member-Per-Month Total Healthcare Cost",
+      "plain_description": "The average total healthcare cost (medical plus pharmacy) per member per month, by insurance plan."
     }
   ],
   "table_usage_series": [
@@ -664,6 +1316,66 @@
       "table": "PHARMACY_CLAIM",
       "grain": "week",
       "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.PHARMACY_CLAIM' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "FACT_PREMIUM",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.FACT_PREMIUM' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "FACT_MEMBER_MONTH",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.FACT_MEMBER_MONTH' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "MEMBER_ELIGIBILITY",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "FACT_CLAIM_DIAGNOSIS",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "DIM_MEMBER",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.DIM_MEMBER' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "DIM_PROVIDER_LOCATION",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "MART_UTILIZATION_PER_1000",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "MART_PROVIDER_YEAR_SUMMARY",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "MART_MEMBER_YEAR_SUMMARY",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
+    },
+    {
+      "schema": "MAIN",
+      "table": "MART_PHARMACY_CLASS_YEAR",
+      "grain": "week",
+      "series_sql": "SELECT DATE_TRUNC('week', ah.query_start_time) AS bucket, COUNT(DISTINCT ah.query_id) AS query_count, COUNT(DISTINCT ah.user_name) AS distinct_users, COUNT_IF(qh.query_type IN ('INSERT','UPDATE','MERGE','COPY','DELETE')) AS write_count FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah, LATERAL FLATTEN(input => ah.base_objects_accessed) obj JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON qh.query_id = ah.query_id WHERE obj.value:\"objectName\"::string = 'HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR' AND ah.query_start_time >= DATEADD(day, -90, CURRENT_TIMESTAMP()) GROUP BY 1 ORDER BY 1;"
     }
   ],
   "correlations": [
@@ -673,7 +1385,7 @@
       "r": 0.9998,
       "n_overlap": 14,
       "type": "kpi_to_kpi",
-      "shared_dimension": "MAIN schema, CLAIM_ID — same measure (plan-paid amount) at two aggregation levels: header total vs. sum of that claim's lines. Genuine reconciliation pair. n_overlap=14 passes the >=8 validity gate.",
+      "shared_dimension": "MAIN schema, CLAIM_ID -- same measure (plan-paid amount) at two aggregation levels: header total vs. sum of that claim's lines. Genuine reconciliation pair. n_overlap=14 passes the >=8 validity gate.",
       "join_key": "CLAIM_ID"
     },
     {
@@ -682,7 +1394,7 @@
       "r": 0.984,
       "n_overlap": 14,
       "type": "kpi_to_kpi",
-      "shared_dimension": "MAIN schema, MEMBER_ID — related but distinct real-world events (claims vs. encounters); correlated, not a reconciliation pair. n_overlap=14 passes the validity gate.",
+      "shared_dimension": "MAIN schema, MEMBER_ID -- related but distinct real-world events (claims vs. encounters); correlated, not a reconciliation pair. n_overlap=14 passes the validity gate.",
       "join_key": null
     },
     {
@@ -691,7 +1403,7 @@
       "r": 0.972,
       "n_overlap": 14,
       "type": "kpi_to_kpi",
-      "shared_dimension": "MAIN schema, CLAIM_ID — one claim has many lines, so counts are structurally correlated but not equal; not a reconciliation pair. n_overlap=14 passes the validity gate.",
+      "shared_dimension": "MAIN schema, CLAIM_ID -- one claim has many lines, so counts are structurally correlated but not equal; not a reconciliation pair. n_overlap=14 passes the validity gate.",
       "join_key": null
     },
     {
@@ -700,50 +1412,50 @@
       "r": 0.941,
       "n_overlap": 14,
       "type": "kpi_to_kpi",
-      "shared_dimension": "MAIN schema, CLAIM_ID — different measures (billed vs. plan-paid), correlated but not the same quantity; not a reconciliation pair. n_overlap=14 passes the validity gate.",
+      "shared_dimension": "MAIN schema, CLAIM_ID -- different measures (billed vs. plan-paid), correlated but not the same quantity; not a reconciliation pair. n_overlap=14 passes the validity gate.",
       "join_key": null
     }
   ],
   "skipped": [
     {
-      "object": "main.mart_member_year_summary.*",
-      "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."
-    },
-    {
-      "object": "main.mart_provider_year_summary.*",
-      "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."
-    },
-    {
-      "object": "main.mart_pharmacy_class_year.*",
-      "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."
-    },
-    {
-      "object": "main.mart_utilization_per_1000.*",
-      "reason": "Annual grain only (CALENDAR_YEAR); 90-day lookback yields well under the ~12-bucket viability bar."
-    },
-    {
-      "object": "main.fact_premium.*",
-      "reason": "Monthly grain (COVERAGE_MONTH); own-max-anchored 90-day window yields only ~3 buckets, below viability bar."
-    },
-    {
-      "object": "main.fact_member_month.*",
-      "reason": "Monthly grain (MONTH_START_DATE); own-max-anchored 90-day window yields only ~3 buckets, below viability bar."
-    },
-    {
-      "object": "main.mart_pmpm_plan_month.*",
-      "reason": "Monthly grain (YEAR_MONTH text, not a date type); would need casting and still yields too few 90-day buckets."
-    },
-    {
       "object": "main.audit_load_log.*",
-      "reason": "Structurally qualifies (RECORD_COUNT/FILE_BYTES numeric, LOAD_START_TS timestamp) but every row was written at the same instant (2026-09-04, the initial bulk load) — zero time variance, cannot build a real series. A genuinely operational load-audit table would be a good KPI source once it accumulates loads over time."
+      "reason": "Structurally qualifies (RECORD_COUNT/FILE_BYTES numeric, LOAD_START_TS timestamp) but every row was written at the same instant (2026-09-04, the initial bulk load) -- zero time variance, cannot build a real series."
     },
     {
-      "object": "main.dim_member.count_star / .risk_score",
-      "reason": "Structurally qualifies (RISK_SCORE numeric, RECORD_CREATED_DATE date, 3,000 rows, 58 distinct weeks) and was found by the full-database scan, but deprioritized this pass for cost reasons rather than disqualified — a legitimate candidate for the next run, not a data problem."
+      "object": "main.dim_member.avg_risk_score",
+      "reason": "AVG(RISK_SCORE) confirmed directly: weak month-grain signal (r2=0.047), weekly averages computed over only ~44-66 new members/week -- consistent with small-cohort sampling noise rather than a real population-risk trend. main.dim_member.count_star was added instead."
     },
     {
       "object": "main.dim_member_group.eligible_lives / main.dim_network.* / main.dim_benefit_structure.*",
-      "reason": "Structurally qualify but too few rows (104 / 6 / 16 respectively) to produce a meaningful weekly series even with full history — noted by the full-database scan, correctly filtered out by the signal/volume criteria rather than never considered."
+      "reason": "Structurally qualify but too few rows (104 / 6 / 16 respectively) to produce a meaningful weekly series even with full history."
+    },
+    {
+      "object": "main.fact_member_month.avg_risk_score",
+      "reason": "Nearly constant (1.331-1.357 across all 78 months of history, CV~0.01) with only weak signal (month-grain r2=0.21) -- doesn't clear the non-trivial-variance bar."
+    },
+    {
+      "object": "main.member_eligibility.avg_coverage_months_count",
+      "reason": "Monthly averages are noisy and only weakly trended (month-grain r2=0.037), driven mostly by small sample sizes in non-January months."
+    },
+    {
+      "object": "main.fact_claim_diagnosis.diag_per_claim_ratio",
+      "reason": "COUNT(*)/COUNT(DISTINCT CLAIM_ID) is nearly constant at 2.13-2.30 across all 14 weekly buckets (CV~2%) -- doesn't clear the non-trivial-variance bar."
+    },
+    {
+      "object": "main.fact_claim_diagnosis.distinct_diagnosis_codes",
+      "reason": "COUNT(DISTINCT DIAGNOSIS_CODE) per week ranges only 54-70 distinct codes/week (CV~6%) -- too flat to be an informative standalone KPI. Also rejected any IS_POA_FLAG-based rate: 83% of rows have IS_POA_FLAG null, making a database-wide POA rate misleading."
+    },
+    {
+      "object": "main.dim_provider_location.avg_is_primary_location_flag",
+      "reason": "Weekly values range 0.42-1.00 on tiny per-week samples (9-18 locations/week) -- consistent with sampling noise around a static per-location attribute rather than a real time-varying business rate."
+    },
+    {
+      "object": "main.mart_member_year_summary.avg_risk_score",
+      "reason": "THIS RUN (batch 6): AVG(RISK_SCORE) by year is nearly constant across all 7 years (1.3186-1.3428, CV~0.6%) -- the same low-variance pattern already rejected for DIM_MEMBER.RISK_SCORE (batch 5) and FACT_MEMBER_MONTH.RISK_SCORE (batch 2). main.mart_member_year_summary.pmpm was added instead as the qualifying KPI for this table."
+    },
+    {
+      "object": "main.mart_provider_year_summary.sum_plan_paid_amount / sum_billed_amount / sum_allowed_amount (by year)",
+      "reason": "THIS RUN (batch 6): considered as candidates but not added -- these would largely duplicate the already-covered main.medical_claim_header.sum_total_plan_paid_amount / sum_total_billed_amount / sum_total_allowed_amount weekly KPIs at a coarser, redundant annual/provider-rollup grain. A deliberate scope choice to spend this batch's budget on the genuinely novel weighted_denial_rate measure instead, not a viability failure."
     }
   ]
 }

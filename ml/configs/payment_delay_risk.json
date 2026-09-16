@@ -1,0 +1,12 @@
+{
+  "target_id": "payment_delay_risk",
+  "data_path": "data/payment_delay_risk_training.csv",
+  "target": "is_slow_payment",
+  "task": "binary",
+  "id_cols": ["claim_id"],
+  "time_col": "submission_date",
+  "leakage_cols": [],
+  "test_fraction": 0.2,
+  "random_seed": 42,
+  "model_dir": "models"
+}

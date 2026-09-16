@@ -1,0 +1,12 @@
+{
+  "target_id": "coverage_lapse_risk",
+  "data_path": "data/coverage_lapse_risk_training.csv",
+  "target": "TARGET",
+  "task": "binary",
+  "id_cols": ["ELIGIBILITY_ID", "MEMBER_ID"],
+  "time_col": "EFFECTIVE_DATE",
+  "leakage_cols": [],
+  "test_fraction": 0.2,
+  "random_seed": 42,
+  "model_dir": "models"
+}

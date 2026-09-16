@@ -1,8 +1,6 @@
-import { fmt } from '../lib/format.js'
-import { statusMeta } from '../data/kpis.js'
-
-export default function ChatDrawer({ kpi, floats, msgs, input, busy, suggestions, onInput, onKey, onSend, onPick, onClose }) {
-  const meta = statusMeta[kpi.statusTier]
+// scope: { name, meta: { fg, mark, bg, bd, label }, metaText } — works for a KPI or a risk pattern.
+export default function ChatDrawer({ scope, floats, msgs, input, busy, suggestions, onInput, onKey, onSend, onPick, onClose }) {
+  const { name, meta, metaText } = scope
 
   return (
     <aside
@@ -21,16 +19,16 @@ export default function ChatDrawer({ kpi, floats, msgs, input, busy, suggestions
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 600 }}>Analyst</div>
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Grounded in {kpi.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Grounded in {name}</div>
           </div>
         </div>
         <button className="icon-btn" onClick={onClose}>✕</button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: meta.bg, borderBottom: `1px solid ${meta.bd}` }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.mark }} />
-        <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{kpi.name}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{fmt(kpi, kpi.value)} · {meta.label}</span>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: meta.mark, flex: '0 0 6px' }} />
+        <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{metaText}</span>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -66,10 +64,10 @@ export default function ChatDrawer({ kpi, floats, msgs, input, busy, suggestions
           ))}
         </div>
         <div className="chat-input-wrap">
-          <input className="chat-input" value={input} onChange={onInput} onKeyDown={onKey} placeholder="Ask about this metric…" />
+          <input className="chat-input" value={input} onChange={onInput} onKeyDown={onKey} placeholder="Ask about this…" />
           <button className="btn-primary" onClick={onSend}>Send</button>
         </div>
-        <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8 }}>Answers are grounded in this KPI's record only.</div>
+        <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8 }}>Answers are grounded in this record only.</div>
       </div>
     </aside>
   )

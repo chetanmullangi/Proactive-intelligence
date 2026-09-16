@@ -1,0 +1,12 @@
+{
+  "target_id": "example_risk",
+  "data_path": "data/example_risk_training.csv",
+  "target": "outcome_flag",
+  "task": "binary",
+  "id_cols": ["claim_id"],
+  "time_col": "prediction_point_date",
+  "leakage_cols": [],
+  "test_fraction": 0.2,
+  "random_seed": 42,
+  "model_dir": "models"
+}

@@ -1,0 +1,41 @@
+{
+  "feature_cols": [
+    "diff_lag_1",
+    "diff_lag_2",
+    "diff_lag_3",
+    "diff_lag_4",
+    "diff_lag_5",
+    "diff_lag_6",
+    "diff_lag_7",
+    "diff_lag_8",
+    "vs_roll_mean_4",
+    "vs_roll_mean_12",
+    "roll_std_4",
+    "month",
+    "week_of_year"
+  ],
+  "target": "target",
+  "target_id": "payment_count_h2",
+  "task": "regression",
+  "metrics": {
+    "mae": 26.34446715576756,
+    "r2": 0.048977514081379514
+  },
+  "feature_importance": {
+    "vs_roll_mean_12": 8.0,
+    "diff_lag_7": 6.0,
+    "roll_std_4": 6.0,
+    "diff_lag_5": 5.0,
+    "diff_lag_6": 4.0,
+    "vs_roll_mean_4": 4.0,
+    "diff_lag_8": 3.0,
+    "diff_lag_2": 3.0,
+    "diff_lag_4": 2.0,
+    "month": 2.0,
+    "week_of_year": 2.0,
+    "diff_lag_3": 1.0,
+    "diff_lag_1": 1.0
+  },
+  "trained_at": "2026-09-14T10:49:33.665891+00:00",
+  "lightgbm_version": "4.7.0"
+}

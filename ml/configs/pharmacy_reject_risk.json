@@ -1,0 +1,12 @@
+{
+  "target_id": "pharmacy_reject_risk",
+  "data_path": "data/pharmacy_reject_risk_training.csv",
+  "target": "is_rejected",
+  "task": "binary",
+  "id_cols": ["pharmacy_claim_id"],
+  "time_col": "fill_date",
+  "leakage_cols": [],
+  "test_fraction": 0.2,
+  "random_seed": 42,
+  "model_dir": "models"
+}

@@ -1,0 +1,41 @@
+{
+  "feature_cols": [
+    "diff_lag_1",
+    "diff_lag_2",
+    "diff_lag_3",
+    "diff_lag_4",
+    "diff_lag_5",
+    "diff_lag_6",
+    "diff_lag_7",
+    "diff_lag_8",
+    "vs_roll_mean_4",
+    "vs_roll_mean_12",
+    "roll_std_4",
+    "month",
+    "week_of_year"
+  ],
+  "target": "target",
+  "target_id": "header_count_h4",
+  "task": "regression",
+  "metrics": {
+    "mae": 27.50802403345303,
+    "r2": 0.30912105111540866
+  },
+  "feature_importance": {
+    "vs_roll_mean_12": 45.0,
+    "month": 30.0,
+    "diff_lag_3": 30.0,
+    "diff_lag_1": 25.0,
+    "roll_std_4": 24.0,
+    "week_of_year": 21.0,
+    "diff_lag_8": 21.0,
+    "vs_roll_mean_4": 20.0,
+    "diff_lag_5": 14.0,
+    "diff_lag_6": 12.0,
+    "diff_lag_2": 11.0,
+    "diff_lag_7": 11.0,
+    "diff_lag_4": 9.0
+  },
+  "trained_at": "2026-09-14T10:47:05.270503+00:00",
+  "lightgbm_version": "4.7.0"
+}

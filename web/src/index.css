@@ -111,12 +111,6 @@ input { font-family: var(--font-sans); }
   transform: translateY(-2px);
 }
 
-.strength-bar { height: 4px; border-radius: 2px; background: #f0f0f0; width: 60px; display: block; overflow: hidden; }
-.strength-bar > span { display: block; height: 4px; border-radius: 2px; }
-.strength-strong > span { background: var(--pri); width: 100%; }
-.strength-moderate > span { background: #8b8bf5; width: 60%; }
-.strength-weak > span { background: #c2c2fa; width: 25%; }
-
 .btn-primary {
   display: flex; align-items: center; gap: 8px; border: none; border-radius: 8px;
   background: var(--pri); color: #fff; padding: 8px 14px; font-family: inherit;
@@ -152,20 +146,6 @@ input { font-family: var(--font-sans); }
   font-family: inherit; font-size: 12px; padding: 6px 11px; cursor: pointer; text-align: left;
 }
 .suggestion-btn:hover { border-color: var(--pri); color: var(--pri); }
-
-.reason-row { border-top: 1px solid var(--line-soft); }
-.reason-toggle {
-  display: grid; grid-template-columns: 30px minmax(0,1fr) 120px 20px; gap: 14px; align-items: center;
-  padding: 16px 0; cursor: pointer;
-}
-
-.corr-row { padding: 12px 0; border-top: 1px solid var(--line-soft); cursor: pointer; }
-.corr-row:hover { opacity: 0.65; }
-
-.source-chip {
-  font-size: 12px; color: var(--ink-2); background: var(--rail-bg); border: 1px solid var(--line);
-  border-radius: 6px; padding: 5px 9px;
-}
 
 .crumb-btn {
   border: none; background: none; padding: 0; cursor: pointer; font-family: inherit;

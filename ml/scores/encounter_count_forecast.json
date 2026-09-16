@@ -1,0 +1,58 @@
+{
+  "series_id": "encounter_count",
+  "grain": "week",
+  "method": "ml_lightgbm",
+  "last_observed_bucket": "2026-06-22",
+  "last_observed_value": 318.0,
+  "beats_naive_all_horizons": false,
+  "forecast": [
+    {
+      "horizon": 1,
+      "bucket": "2026-06-29",
+      "point": 318.33870967741933,
+      "lower": 286.59999999999997,
+      "upper": 354.4,
+      "holdout_mae": 22.52716468590832,
+      "naive_mae": 22.473684210526315,
+      "beats_naive": false,
+      "holdout_r2": -0.0008589522512849612,
+      "train_rows": 92
+    },
+    {
+      "horizon": 2,
+      "bucket": "2026-07-06",
+      "point": 318.8360655737705,
+      "lower": 292.8,
+      "upper": 340.6,
+      "holdout_mae": 17.166522864538393,
+      "naive_mae": 17.210526315789473,
+      "beats_naive": true,
+      "holdout_r2": -0.0134816270291378,
+      "train_rows": 91
+    },
+    {
+      "horizon": 3,
+      "bucket": "2026-07-13",
+      "point": 318.6393442622951,
+      "lower": 282.0,
+      "upper": 344.2,
+      "holdout_mae": 22.737704918032787,
+      "naive_mae": 22.666666666666668,
+      "beats_naive": false,
+      "holdout_r2": -0.029741718594477717,
+      "train_rows": 90
+    },
+    {
+      "horizon": 4,
+      "bucket": "2026-07-20",
+      "point": 318.7,
+      "lower": 273.09999999999997,
+      "upper": 348.9,
+      "holdout_mae": 20.56666666666667,
+      "naive_mae": 20.333333333333332,
+      "beats_naive": false,
+      "holdout_r2": -0.026656763943144313,
+      "train_rows": 89
+    }
+  ]
+}

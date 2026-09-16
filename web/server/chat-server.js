@@ -24,30 +24,50 @@ const TIMEOUT_MS = 60_000
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-let kpisCache = null
-async function loadKpis() {
-  if (kpisCache) return kpisCache
-  const mod = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', 'kpis.js')).href)
-  kpisCache = mod
-  return mod
+const dataCache = {}
+async function loadData(file) {
+  if (dataCache[file]) return dataCache[file]
+  dataCache[file] = await import(pathToFileURL(path.join(__dirname, '..', 'src', 'data', file)).href)
+  return dataCache[file]
 }
 
-const SYSTEM_RULES = `You are a business-facing analyst answering questions about healthcare claims KPIs, inside a chat panel in a web dashboard. You are talking to a claims manager or business stakeholder, not a data engineer or statistician.
+const SYSTEM_RULES = `You are a business-facing analyst answering questions about healthcare claims KPIs and proactive risk patterns (groups of claims a model has flagged as likely to run into trouble), inside a chat panel in a web dashboard. You are talking to a claims manager or business stakeholder, not a data engineer or statistician.
+
+Exposure figures on risk patterns are estimates of what may be affected if the pattern continues — never describe them as money already lost. A risk pattern is a likely problem, not a certainty.
 
 The one rule that overrides everything else: your default answer is one to three plain, complete sentences a claims operations manager with no statistics or database background could read and immediately understand, with no follow-up question needed. Never use, in a default answer: z-score, r-squared, p-value, MAD, standard deviation, variance, regression, correlation coefficient, percentile, confidence interval as a number, SQL, table names, column names, or method/technique names. State real numbers in rounded, everyday terms ("about 500 a week", not "466.0").
 
-You will be given the specific KPI's full record below, including both a plain-language layer (already written for a business reader) and a technical layer (the statistics and evidence behind it). Lead every answer from the plain layer. Only surface anything from the technical layer if the user's question explicitly asks how something was calculated, what the evidence/method was, or for the underlying statistics — and even then, preface it clearly as switching into technical detail.
+You will be given the specific record below. For a risk pattern, every field is already business-facing — never introduce statistics or model vocabulary (ROC-AUC, precision, training rows, feature importance, etc.) even if asked how it was calculated; instead say plainly that the reliability read is the confidence line already given. For a KPI, lead every answer from the plain-language fields; only surface anything from a technical field if the user's question explicitly asks how something was calculated, what the evidence/method was, or for the underlying statistics — and even then, preface it clearly as switching into technical detail.
 
 If the question is about something not covered by the record below, say plainly that you don't have that specific information rather than guessing. Keep answers concise — a few sentences, not a report. Do not use any tools; answer directly and only from the context given.`
 
-function buildPrompt({ kpi, allKpis, question, history }) {
+function buildPrompt({ kpi, risk, allKpis, allRisks, question, history }) {
   const historyText = (history || [])
     .slice(-6)
     .map((m) => `${m.role === 'user' ? 'User' : 'Analyst'}: ${m.text}`)
     .join('\n')
 
   let context
-  if (kpi) {
+  if (risk) {
+    context = `Risk pattern record (JSON), fully business-facing already — do not invent statistics on top of it:\n${JSON.stringify(
+      {
+        headline: risk.headline,
+        risk_type: risk.targetLabel,
+        impact: risk.impact,
+        whats_happening: risk.whatsHappening,
+        what_this_means: risk.whatThisMeans,
+        why_its_happening: risk.whyItsHappening,
+        estimated_exposure_usd: risk.exposureUsd,
+        cost_note: risk.costNote,
+        affected: `${risk.affectedCount} ${risk.affectedUnit}, ${risk.affectedDescription}`,
+        what_to_do: risk.actions,
+        what_good_looks_like: risk.target,
+        confidence: risk.confidenceLine,
+      },
+      null,
+      2
+    )}`
+  } else if (kpi) {
     context = `KPI record (JSON):\n${JSON.stringify(
       {
         name: kpi.name,
@@ -68,11 +88,21 @@ function buildPrompt({ kpi, allKpis, question, history }) {
       2
     )}`
   } else {
-    context = `No single KPI is open right now — this is a portfolio-level question. Here is every tracked KPI's plain-language status:\n${JSON.stringify(
+    context = `Nothing specific is open right now — this is a portfolio-level question.\n\nEvery tracked KPI's plain-language status (what has already happened):\n${JSON.stringify(
       (allKpis || []).map((k) => ({
         name: k.name,
         plain_status: k.plainStatus,
         plain_reason: k.plainReason,
+      })),
+      null,
+      2
+    )}\n\nCurrent proactive risk patterns (what is likely to go wrong if nothing changes):\n${JSON.stringify(
+      (allRisks || []).map((r) => ({
+        headline: r.headline,
+        impact: r.impact,
+        whats_happening: r.whatsHappening,
+        estimated_exposure_usd: r.exposureUsd,
+        next_action: r.actions[0]?.action,
       })),
       null,
       2
@@ -146,15 +176,21 @@ const server = createServer(async (req, res) => {
     })
     req.on('end', async () => {
       try {
-        const { kpiId, question, history } = JSON.parse(body || '{}')
+        const { kpiId, riskId, question, history } = JSON.parse(body || '{}')
         if (!question || typeof question !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' })
           res.end(JSON.stringify({ error: 'Missing question.' }))
           return
         }
-        const { kpis } = await loadKpis()
+        const [{ kpis }, { risks }] = await Promise.all([loadData('kpis.js'), loadData('risks.js')])
         const kpi = kpiId ? kpis.find((k) => k.id === kpiId) : null
-        const prompt = buildPrompt({ kpi, allKpis: kpis, question, history })
+        const risk = riskId ? risks.find((r) => r.id === riskId) : null
+        if ((kpiId && !kpi) || (riskId && !risk)) {
+          res.writeHead(404, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Unknown record.' }))
+          return
+        }
+        const prompt = buildPrompt({ kpi, risk, allKpis: kpis, allRisks: risks, question, history })
         const result = await askClaude(prompt)
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify(result))
