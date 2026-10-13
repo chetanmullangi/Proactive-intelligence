@@ -1,0 +1,11 @@
+﻿[2026-10-13T14:20:07] engine starting
+py.exe : C:\chetan\Pro active intelligence\Proactive-intelligence\pi\__main__.py:36: DeprecationWarning: 
+datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to 
+represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+At C:\chetan\Pro active intelligence\Proactive-intelligence\scripts\run_daily.ps1:24 char:1
++ & py -3.12 -m pi daily 2>&1 | Out-File -FilePath $log -Append -Encodi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\chetan\Pro a...(datetime.UTC).:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  t0, started = time.time(), datetime.utcnow()

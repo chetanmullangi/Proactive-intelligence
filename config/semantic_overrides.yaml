@@ -1,0 +1,979 @@
+# Business overrides maintained by the snowflake-data-profiler agent (first written 2026-10-12).
+# Names/descriptions follow from column names, top values and relationships seen via `pi show columns`.
+# Anything a person adds here is kept by later profiler runs unless it is shown to be wrong.
+
+tables:
+  # ---------------- warehouse facts (MAIN) ----------------
+  HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER:
+    business_name: Medical claims
+    description: One row per medical claim version a provider sends us (visit dates, billed/allowed/paid amounts, decision, denial reason, payment date).
+    department: Claims Operations
+  HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE:
+    business_name: Medical claim lines
+    description: One row per service line on a medical claim (procedure, units, billed/allowed/paid amounts, line decision and denial reason).
+    department: Claims Operations
+  HEALTH_CARE.MAIN.PHARMACY_CLAIM:
+    business_name: Pharmacy claims
+    description: One row per prescription fill or reversal adjudicated by the pharmacy benefit manager (drug, days supply, cost, plan paid, status).
+    department: Pharmacy
+  HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT:
+    business_name: Claim payments
+    description: One row per payment (or recoupment) applied to a medical claim, with the provider payee, check/EFT number and amount.
+    department: Finance
+  HEALTH_CARE.MAIN.FACT_PREMIUM:
+    business_name: Premium billing
+    description: One row per premium transaction for a member's coverage month (billed premium split into employer, member, subsidy and government shares; posted date).
+    department: Finance
+  HEALTH_CARE.MAIN.FACT_MEMBER_MONTH:
+    business_name: Member months
+    description: One row per member per month of coverage, derived from eligibility (plan, product, age band, risk score, first-month flag).
+    department: Enrollment & Eligibility
+  HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY:
+    business_name: Member eligibility spans
+    description: One row per coverage span for a member (plan, product, effective and termination dates, change reason, retro and duplicate flags).
+    department: Enrollment & Eligibility
+    event_date: EFFECTIVE_DATE           # coverage starts on the effective date; the engine had picked the record-created date
+    arrival_date: RECORD_CREATED_DATE    # when the enrollment record reached us (retro enrollments arrive after they start)
+  HEALTH_CARE.MAIN.FACT_ENCOUNTER:
+    business_name: Patient encounters
+    description: One row per visit or stay (office, outpatient, ER, inpatient, telehealth); inpatient and nursing-facility stays also carry length of stay and discharge status.
+    department: Utilization Management
+  HEALTH_CARE.MAIN.FACT_PRIOR_AUTHORIZATION:
+    business_name: Prior authorizations
+    description: One row per prior authorization request (service category, review type, requested vs approved units, decision and due dates, outcome).
+    department: Utilization Management
+  HEALTH_CARE.MAIN.FACT_APPEAL:
+    business_name: Appeals
+    description: One row per appeal of a claim (or authorization) denial by a provider or member, with due date, decision and disputed amount. Data starts 2026-08.
+    department: Appeals & Grievances
+  HEALTH_CARE.MAIN.FACT_GRIEVANCE:
+    business_name: Member grievances
+    description: One row per member complaint (category, intake channel, due date, resolution and outcome). Data starts 2026-07.
+    department: Appeals & Grievances
+  HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS:
+    business_name: Claim diagnoses
+    description: One row per diagnosis code listed on a medical claim.
+    department: Claims Operations
+  # ---------------- marts (MAIN) ----------------
+  HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY:
+    business_name: Member cost and use by year
+    description: One row per member per calendar year (member months, medical and pharmacy paid, claims, denials, admits, ER visits, high-cost flags).
+    department: Finance
+  HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR:
+    business_name: Pharmacy spend by drug class and year
+    description: One row per therapeutic drug class per year (scripts, members, plan paid, member cost share, share of annual drug spend).
+    department: Pharmacy
+  HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH:
+    business_name: Plan financials per member per month
+    description: One row per plan per month (member months, premium revenue, medical and pharmacy paid, PMPM, medical loss ratio, gain/loss).
+    department: Finance
+  HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY:
+    business_name: Provider billing by year
+    description: One row per billing provider per year (claims, members, billed/allowed/paid amounts, denial rate).
+    department: Provider Network
+  HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000:
+    business_name: Utilization per 1,000 members
+    description: One row per coverage type per year (admits, ER visits, surgeries, office, imaging and behavioral visits, and the same per 1,000 members).
+    department: Utilization Management
+  # ---------------- dimensions / reference / bridge / audit (MAIN) ----------------
+  HEALTH_CARE.MAIN.DIM_MEMBER:
+    business_name: Members
+    description: One row per member (demographics and identifiers).
+    department: Enrollment & Eligibility
+  HEALTH_CARE.MAIN.DIM_MEMBER_GROUP:
+    business_name: Employer groups
+    description: One row per employer or sponsor group.
+    department: Enrollment & Eligibility
+  HEALTH_CARE.MAIN.DIM_PLAN:
+    business_name: Health plans
+    description: One row per health plan offered.
+    department: Product & Benefits
+  HEALTH_CARE.MAIN.DIM_PRODUCT:
+    business_name: Products
+    description: One row per insurance product line.
+    department: Product & Benefits
+  HEALTH_CARE.MAIN.DIM_BENEFIT_STRUCTURE:
+    business_name: Benefit designs
+    description: One row per benefit structure (deductible / copay / coinsurance design).
+    department: Product & Benefits
+  HEALTH_CARE.MAIN.DIM_NETWORK:
+    business_name: Provider networks
+    description: One row per provider network.
+    department: Provider Network
+  HEALTH_CARE.MAIN.DIM_PROVIDER:
+    business_name: Providers
+    description: One row per provider (type, specialty, state, enrollment and termination dates).
+    department: Provider Network
+  HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION:
+    business_name: Provider locations
+    description: One row per provider practice address.
+    department: Provider Network
+  HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK:
+    business_name: Provider network participation
+    description: One row per provider-network contract period (which provider is in which network, when).
+    department: Provider Network
+  HEALTH_CARE.MAIN.REF_CLAIM_STATUS:
+    business_name: Claim status codes
+    description: Reference list of claim status values.
+    department: Claims Operations
+  HEALTH_CARE.MAIN.REF_DENIAL_REASON:
+    business_name: Denial reason codes
+    description: Reference list of claim denial reason codes.
+    department: Claims Operations
+  HEALTH_CARE.MAIN.REF_DIAGNOSIS:
+    business_name: Diagnosis codes
+    description: Reference list of diagnosis codes used on claims.
+    department: Claims Operations
+  HEALTH_CARE.MAIN.REF_PROCEDURE:
+    business_name: Procedure codes
+    description: Reference list of procedure codes used on claim lines.
+    department: Claims Operations
+  HEALTH_CARE.MAIN.REF_PLACE_OF_SERVICE:
+    business_name: Place of service codes
+    description: Reference list of place-of-service codes.
+    department: Claims Operations
+  HEALTH_CARE.MAIN.REF_DRUG:
+    business_name: Drug list
+    description: Reference list of drugs (NDC, name, therapeutic class).
+    department: Pharmacy
+  HEALTH_CARE.MAIN.REF_DATE:
+    business_name: Calendar
+    description: Calendar reference table (one row per date).
+    department: Data Platform
+  HEALTH_CARE.MAIN.REF_SOURCE_SYSTEM:
+    business_name: Source systems
+    description: Reference list of the source systems that feed the warehouse.
+    department: Data Platform
+  HEALTH_CARE.MAIN.AUDIT_LOAD_LOG:
+    business_name: Warehouse load log
+    description: Technical log of warehouse load runs.
+    department: Data Platform
+  HEALTH_CARE.MAIN.DQ_RULE_RESULT:
+    business_name: Data quality rule results
+    description: Technical log of data quality rule outcomes.
+    department: Data Platform
+  # ---------------- source-system tables (CORE_ADMIN) ----------------
+  HEALTH_CARE.CORE_ADMIN.CLAIM_STATUS_HISTORY:
+    business_name: Claim status changes
+    description: One row per status change in a medical claim's life (submitted, adjudicated, pended, denied, paid, reversed), with the date, reason code and who acted.
+    department: Claims Operations
+  HEALTH_CARE.CORE_ADMIN.PROVIDER_PAYMENT:
+    business_name: Provider payment remittances
+    description: One row per payment (EFT or check) sent to a provider in a weekly payment cycle; each covers one or more claim payments.
+    department: Finance
+  HEALTH_CARE.CORE_ADMIN.MEMBER_HEALTH_PROFILE:
+    business_name: Member health profiles
+    description: One row per member with current utilization cohort, risk score and chronic condition count (a profile snapshot, not business events).
+    department: Care Management
+    role: dimension                      # keyed by member id, one row per member - an entity profile, not a fact
+  HEALTH_CARE.CORE_ADMIN.MEMBER:
+    business_name: Members (source system)
+    description: One row per member in the core administration system.
+    department: Enrollment & Eligibility
+    role: dimension                      # one row per member - an entity table
+  HEALTH_CARE.CORE_ADMIN.SUBSCRIBER:
+    business_name: Subscribers
+    description: One row per subscriber (the policy holder a member is enrolled under).
+    department: Enrollment & Eligibility
+  HEALTH_CARE.CORE_ADMIN.EMPLOYER_GROUP:
+    business_name: Employer groups (source system)
+    description: One row per employer or sponsor group; all 104 groups start 2020-01-01 and none has ended.
+    department: Enrollment & Eligibility
+    kpi_source: false                    # static list - active/start/end counts never move
+  HEALTH_CARE.CORE_ADMIN.PROVIDER:
+    business_name: Providers (source system)
+    description: One row per provider in the provider master (type, specialty, enrollment and termination dates).
+    department: Provider Network
+  HEALTH_CARE.CORE_ADMIN.PROVIDER_LOCATION:
+    business_name: Provider locations (source system)
+    description: One row per provider practice address.
+    department: Provider Network
+    kpi_source: false                    # static address list - its KPIs would be noise
+  HEALTH_CARE.CORE_ADMIN.CLAIM:
+    business_name: Medical claims (source system)
+    description: Core claims system copy of medical claims; loaded into Medical claims (warehouse).
+    department: Claims Operations
+  HEALTH_CARE.CORE_ADMIN.CLAIM_LINE:
+    business_name: Medical claim lines (source system)
+    description: Core claims system copy of claim lines; loaded into Medical claim lines (warehouse).
+    department: Claims Operations
+  HEALTH_CARE.CORE_ADMIN.CLAIM_DIAGNOSIS:
+    business_name: Claim diagnoses (source system)
+    description: Core claims system copy of claim diagnoses; loaded into Claim diagnoses (warehouse).
+    department: Claims Operations
+  HEALTH_CARE.CORE_ADMIN.CLAIM_PAYMENT:
+    business_name: Claim payments (source system)
+    description: Treasury copy of claim payments; loaded into Claim payments (warehouse).
+    department: Finance
+  HEALTH_CARE.CORE_ADMIN.CLAIM_APPEAL:
+    business_name: Appeals (source system)
+    description: Member services copy of appeals; loaded into Appeals (warehouse).
+    department: Appeals & Grievances
+  HEALTH_CARE.CORE_ADMIN.MEMBER_GRIEVANCE:
+    business_name: Member grievances (source system)
+    description: Member services copy of grievances; loaded into Member grievances (warehouse).
+    department: Appeals & Grievances
+  HEALTH_CARE.CORE_ADMIN.CLAIM_ENCOUNTER_DETAIL:
+    business_name: Patient encounters (source system)
+    description: Core claims system copy of encounters; loaded into Patient encounters (warehouse).
+    department: Utilization Management
+  HEALTH_CARE.CORE_ADMIN.PHARMACY_CLAIM:
+    business_name: Pharmacy claims (source system)
+    description: Pharmacy benefit manager copy of pharmacy claims; loaded into Pharmacy claims (warehouse).
+    department: Pharmacy
+  HEALTH_CARE.CORE_ADMIN.PREMIUM_BILLING:
+    business_name: Premium billing (source system)
+    description: Billing system copy of premium transactions; loaded into Premium billing (warehouse).
+    department: Finance
+  HEALTH_CARE.CORE_ADMIN.PRIOR_AUTHORIZATION:
+    business_name: Prior authorizations (source system)
+    description: Utilization management system copy of prior authorizations; loaded into Prior authorizations (warehouse).
+    department: Utilization Management
+  HEALTH_CARE.CORE_ADMIN.MEMBER_ELIGIBILITY:
+    business_name: Member eligibility spans (source system)
+    description: Enrollment feed copy of eligibility spans (with feed received date); loaded into Member eligibility spans (warehouse).
+    department: Enrollment & Eligibility
+  HEALTH_CARE.CORE_ADMIN.PROVIDER_NETWORK_CONTRACT:
+    business_name: Provider network contracts (source system)
+    description: Provider master copy of network contract periods; loaded into Provider network participation (warehouse).
+    department: Provider Network
+
+columns: {}
+
+kpis:
+  # ================= Claim status changes (CORE_ADMIN.CLAIM_STATUS_HISTORY) =================
+  health_care.core_admin.claim_status_history.count:
+    business_name: Claim status changes recorded
+    description: How many claim status changes (submitted, adjudicated, paid, denied, ...) happen on each day.
+    direction_good: neutral
+  health_care.core_admin.claim_status_history.rate.claim_status.denied:
+    business_name: Share of claim status changes that are denials
+    description: Of all claim status changes on a day, the share that moved a claim to Denied.
+    direction_good: down
+  health_care.core_admin.claim_status_history.rate.claim_status.pended:
+    business_name: Share of claim status changes that are pends
+    description: Of all claim status changes on a day, the share that put a claim on hold (Pended) for records or review.
+    direction_good: down
+  health_care.core_admin.claim_status_history.rate.claim_status.reversed:
+    business_name: Share of claim status changes that are reversals
+    description: Of all claim status changes on a day, the share that reversed a previously processed claim.
+    direction_good: down
+  health_care.core_admin.claim_status_history.rate.claim_status.submitted:
+    business_name: Share of claim status changes that are new submissions
+    description: Of all claim status changes on a day, the share that are claims first being submitted (mix indicator, not good or bad).
+    direction_good: neutral
+
+  # ================= Providers (CORE_ADMIN.PROVIDER) =================
+  health_care.core_admin.provider.active:
+    business_name: Providers under contract
+    description: How many providers are enrolled and not yet terminated on each day.
+    direction_good: up
+  health_care.core_admin.provider.ends:
+    business_name: Provider terminations
+    description: How many providers leave the network (termination date) in each month.
+    direction_good: down
+  health_care.core_admin.provider.starts:
+    # disabled: every provider enrollment date is 2011-10 to 2019-06; the series has been zero for years
+    business_name: New providers enrolled
+    description: How many providers join the network on each day.
+    direction_good: up
+    enabled: false
+
+  # ================= Provider payment remittances (CORE_ADMIN.PROVIDER_PAYMENT) =================
+  health_care.core_admin.provider_payment.count:
+    business_name: Provider payments sent
+    description: How many EFT or check payments go out to providers each week (one payment can cover many claims).
+    direction_good: neutral
+
+  # ================= Appeals (MAIN.FACT_APPEAL) =================
+  health_care.main.fact_appeal.count:
+    business_name: Appeals received
+    description: How many appeals of claim or authorization denials are received each day.
+    direction_good: down
+  health_care.main.fact_appeal.avg.decision_days:
+    business_name: Average days to decide an appeal (by receipt date)
+    description: For appeals received on a day and already decided, the average days the decision took (recent days only include fast decisions).
+    direction_good: down
+  health_care.main.fact_appeal.days.received_date.decision_date:
+    business_name: Average days to decide an appeal
+    description: For appeals decided on a day, the average days since the appeal was received.
+    direction_good: down
+  health_care.main.fact_appeal.rate.appeal_status.closed:
+    # disabled: engine dates status shares by decision date, so every decided appeal is closed (100% by construction)
+    business_name: Share of appeals closed
+    description: Of the appeals decided on a day, the share closed.
+    direction_good: up
+    enabled: false
+  health_care.main.fact_appeal.rate.appeal_status.in_review:
+    # disabled: complement of the closed share (status is only CLOSED or IN_REVIEW)
+    business_name: Share of appeals still in review
+    description: Of the appeals received on a day, the share still in review.
+    direction_good: down
+    enabled: false
+  health_care.main.fact_appeal.rate.appeal_decision.overturned:
+    business_name: Appeal overturn rate
+    description: Of the appeals decided on a day, the share where our original denial was overturned (a sign the denial was wrong).
+    direction_good: down
+  health_care.main.fact_appeal.rate.appeal_decision.upheld:
+    # disabled: exact complement of the overturn rate (decision is only UPHELD or OVERTURNED)
+    business_name: Appeal uphold rate
+    description: Of the appeals decided on a day, the share where the denial was upheld.
+    direction_good: neutral
+    enabled: false
+  health_care.main.fact_appeal.rate.is_expedited_flag:
+    business_name: Share of appeals that are expedited
+    description: Of the appeals received on a day, the share filed as urgent (expedited review).
+    direction_good: neutral
+  health_care.main.fact_appeal.rate.is_timely_decision_flag:
+    # disabled: undecided appeals have a null flag and are counted as late; replaced by custom.timely_decision_rate
+    business_name: Share of appeals decided on time (all appeals)
+    description: Of all appeals received on a day, the share decided by the due date.
+    direction_good: up
+    enabled: false
+  health_care.main.fact_appeal.sum.disputed_amount:
+    business_name: Amount under appeal
+    description: Total dollars in dispute on the appeals received each day.
+    direction_good: down
+  health_care.main.fact_appeal.custom.timely_decision_rate:
+    # note: all 19 appeals decided so far were on time (100%), so the engine's constant-rate rule drops this until one is late
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_APPEAL
+    kind: rate
+    unit: share
+    date_expr: '"DECISION_DATE"::date'
+    num_expr: 'iff("IS_TIMELY_DECISION_FLAG"::boolean, 1, 0)'
+    den_expr: '1'
+    business_name: Appeals decided on time
+    description: Of the appeals decided on a day, the share decided by their due date.
+    direction_good: up
+    department: Appeals & Grievances
+
+  # ================= Claim payments (MAIN.FACT_CLAIM_PAYMENT) =================
+  health_care.main.fact_claim_payment.count:
+    business_name: Claim payments made
+    description: How many claim payments and recoupments are made each week (by payment date).
+    direction_good: neutral
+  health_care.main.fact_claim_payment.sum.paid_amount:
+    business_name: Dollars paid to providers
+    description: Total paid to providers on claims each week, net of recoupments (by payment date - cash out the door).
+    direction_good: neutral
+
+  # ================= Patient encounters (MAIN.FACT_ENCOUNTER) =================
+  health_care.main.fact_encounter.count:
+    business_name: Patient encounters
+    description: How many visits and stays start on each day; recent days fill in as claims arrive.
+    direction_good: neutral
+  health_care.main.fact_encounter.avg.length_of_stay_days:
+    business_name: Average length of stay (all encounters)
+    description: Average days per encounter starting on a day; non-inpatient encounters count as 0 days, so it moves with the inpatient mix.
+    direction_good: neutral
+  health_care.main.fact_encounter.rate.is_readmission_30d_flag:
+    business_name: 30-day readmission share
+    description: Of the encounters starting on a day, the share flagged as a readmission within 30 days of a prior discharge.
+    direction_good: down
+  health_care.main.fact_encounter.rate.discharge_status.expired:
+    # disabled: denominator is all encounters, but only inpatient/SNF stays have a discharge status; replaced by custom.discharge_expired_rate
+    business_name: Share of encounters ending in death (all encounters)
+    description: Of all encounters starting on a day, the share with discharge status Expired.
+    direction_good: down
+    enabled: false
+  health_care.main.fact_encounter.rate.discharge_status.home:
+    # disabled: wrong denominator (all encounters); replaced by custom.discharge_home_rate
+    business_name: Share of encounters discharged home (all encounters)
+    description: Of all encounters starting on a day, the share discharged home.
+    direction_good: neutral
+    enabled: false
+  health_care.main.fact_encounter.rate.discharge_status.home_health:
+    # disabled: wrong denominator (all encounters); replaced by custom.discharge_home_health_rate
+    business_name: Share of encounters discharged to home health (all encounters)
+    description: Of all encounters starting on a day, the share discharged to home health care.
+    direction_good: neutral
+    enabled: false
+  health_care.main.fact_encounter.rate.discharge_status.snf:
+    # disabled: wrong denominator (all encounters); replaced by custom.discharge_snf_rate
+    business_name: Share of encounters discharged to a nursing facility (all encounters)
+    description: Of all encounters starting on a day, the share discharged to a skilled nursing facility.
+    direction_good: neutral
+    enabled: false
+  health_care.main.fact_encounter.custom.discharge_expired_rate:
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_ENCOUNTER
+    kind: rate
+    unit: share
+    date_expr: '"SERVICE_START_DATE"::date'
+    num_expr: 'iff("DISCHARGE_STATUS" = ''EXPIRED'', 1, 0)'
+    den_expr: 'iff("DISCHARGE_STATUS" is not null, 1, 0)'
+    business_name: In-hospital death rate
+    description: Of inpatient and nursing-facility stays starting on a day, the share where the patient died during the stay.
+    direction_good: down
+    department: Utilization Management
+  health_care.main.fact_encounter.custom.discharge_home_rate:
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_ENCOUNTER
+    kind: rate
+    unit: share
+    date_expr: '"SERVICE_START_DATE"::date'
+    num_expr: 'iff("DISCHARGE_STATUS" = ''HOME'', 1, 0)'
+    den_expr: 'iff("DISCHARGE_STATUS" is not null, 1, 0)'
+    business_name: Stays discharged home
+    description: Of inpatient and nursing-facility stays starting on a day, the share where the patient went straight home.
+    direction_good: up
+    department: Utilization Management
+  health_care.main.fact_encounter.custom.discharge_home_health_rate:
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_ENCOUNTER
+    kind: rate
+    unit: share
+    date_expr: '"SERVICE_START_DATE"::date'
+    num_expr: 'iff("DISCHARGE_STATUS" = ''HOME_HEALTH'', 1, 0)'
+    den_expr: 'iff("DISCHARGE_STATUS" is not null, 1, 0)'
+    business_name: Stays discharged to home health care
+    description: Of inpatient and nursing-facility stays starting on a day, the share discharged home with home health services.
+    direction_good: neutral
+    department: Utilization Management
+  health_care.main.fact_encounter.custom.discharge_snf_rate:
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_ENCOUNTER
+    kind: rate
+    unit: share
+    date_expr: '"SERVICE_START_DATE"::date'
+    num_expr: 'iff("DISCHARGE_STATUS" = ''SNF'', 1, 0)'
+    den_expr: 'iff("DISCHARGE_STATUS" is not null, 1, 0)'
+    business_name: Stays discharged to a nursing facility
+    description: Of inpatient and nursing-facility stays starting on a day, the share discharged to a skilled nursing facility (a costly next step).
+    direction_good: neutral
+    department: Utilization Management
+
+  # ================= Member grievances (MAIN.FACT_GRIEVANCE) =================
+  health_care.main.fact_grievance.count:
+    business_name: Member grievances received
+    description: How many member complaints are received each day.
+    direction_good: down
+  health_care.main.fact_grievance.avg.resolution_days:
+    business_name: Average days to resolve a grievance (by receipt date)
+    description: For grievances received on a day and already resolved, the average days resolution took (recent days only include fast resolutions).
+    direction_good: down
+  health_care.main.fact_grievance.days.received_date.resolution_date:
+    business_name: Average days to resolve a grievance
+    description: For grievances resolved on a day, the average days since the complaint was received.
+    direction_good: down
+  health_care.main.fact_grievance.rate.grievance_status.resolved:
+    # engine now dates status shares by resolution date, so this is 100% by construction (engine drops it)
+    business_name: Share of grievances resolved
+    description: Of the grievances resolved on a day, the share with status Resolved (always 100%; kept only for completeness).
+    direction_good: up
+    enabled: false
+  health_care.main.fact_grievance.rate.grievance_status.open:
+    # disabled: complement of the resolved share (status is only RESOLVED or OPEN); 0% by construction when dated by resolution date
+    business_name: Share of grievances still open
+    description: Of the grievances received on a day, the share still open.
+    direction_good: down
+    enabled: false
+  health_care.main.fact_grievance.rate.is_timely_resolution_flag:
+    # disabled: dated by receipt date and open grievances (null flag) count as late; replaced by custom.timely_resolution_rate
+    business_name: Share of grievances resolved on time (all grievances)
+    description: Of all grievances received on a day, the share resolved by the due date.
+    direction_good: up
+    enabled: false
+  health_care.main.fact_grievance.rate.resolution_outcome.resolved_in_favor_of_member:
+    business_name: Grievances resolved in the member's favor
+    description: Of the grievances resolved on a day, the share where the member's complaint was upheld (we got something wrong).
+    direction_good: down
+  health_care.main.fact_grievance.rate.resolution_outcome.plan_position_upheld:
+    business_name: Grievances where the plan's position stood
+    description: Of the grievances resolved on a day, the share where the plan's original position was upheld.
+    direction_good: neutral
+  health_care.main.fact_grievance.rate.resolution_outcome.explanation_provided:
+    business_name: Grievances closed with an explanation
+    description: Of the grievances resolved on a day, the share closed by explaining the plan's rules or decision to the member.
+    direction_good: neutral
+  health_care.main.fact_grievance.rate.resolution_outcome.withdrawn:
+    business_name: Grievances withdrawn
+    description: Of the grievances resolved on a day, the share the member withdrew.
+    direction_good: neutral
+  health_care.main.fact_grievance.custom.timely_resolution_rate:
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_GRIEVANCE
+    kind: rate
+    unit: share
+    date_expr: '"RESOLUTION_DATE"::date'
+    num_expr: 'iff("IS_TIMELY_RESOLUTION_FLAG"::boolean, 1, 0)'
+    den_expr: '1'
+    business_name: Grievances resolved on time
+    description: Of the grievances resolved on a day, the share resolved by their due date.
+    direction_good: up
+    department: Appeals & Grievances
+
+  # ================= Member months (MAIN.FACT_MEMBER_MONTH) =================
+  health_care.main.fact_member_month.sum.member_month_count:
+    business_name: Member months
+    description: How many members had coverage in each month - the base for every per-member-per-month measure.
+    direction_good: up
+    tags: [member_months]
+  health_care.main.fact_member_month.count:
+    # disabled: MEMBER_MONTH_COUNT is always 1, so this row count is identical to "Member months"
+    business_name: Member month records
+    description: Number of member-month rows per month.
+    direction_good: neutral
+    enabled: false
+  health_care.main.fact_member_month.avg.member_age:
+    business_name: Average member age
+    description: Average age of members covered in each month.
+    direction_good: neutral
+  health_care.main.fact_member_month.rate.is_first_coverage_month_flag:
+    business_name: Share of members in their first month
+    description: Of members covered in a month, the share whose coverage just started (new enrollment indicator).
+    direction_good: neutral
+
+  # ================= Premium billing (MAIN.FACT_PREMIUM) =================
+  health_care.main.fact_premium.sum.billed_premium_amount:
+    business_name: Premium billed
+    description: Total premium billed for each coverage month (all payers combined) - the plan's revenue.
+    direction_good: up
+    tags: [revenue]
+  health_care.main.fact_premium.count:
+    business_name: Premium transactions
+    description: How many premium transactions (bills and retro adjustments) are recorded for each coverage month.
+    direction_good: neutral
+  health_care.main.fact_premium.sum.employer_contribution_amount:
+    business_name: Premium paid by employers
+    description: The employer-paid part of premium billed for each coverage month.
+    direction_good: neutral
+  health_care.main.fact_premium.sum.member_contribution_amount:
+    business_name: Premium paid by members
+    description: The member-paid part of premium billed for each coverage month.
+    direction_good: neutral
+  health_care.main.fact_premium.sum.subsidy_aptc_amount:
+    business_name: Premium paid by federal subsidy (APTC)
+    description: The advance premium tax credit (Exchange subsidy) part of premium billed for each coverage month.
+    direction_good: neutral
+  health_care.main.fact_premium.sum.government_capitation_amount:
+    business_name: Government capitation premium
+    description: The government-paid capitation part of premium (Medicare/Medicaid) for each coverage month.
+    direction_good: neutral
+
+  # ================= Prior authorizations (MAIN.FACT_PRIOR_AUTHORIZATION) =================
+  health_care.main.fact_prior_authorization.count:
+    business_name: Prior authorization requests
+    description: How many prior authorization requests are received each day.
+    direction_good: neutral
+  health_care.main.fact_prior_authorization.avg.requested_units:
+    business_name: Average units requested per authorization
+    description: Average number of service units (visits, days, doses) requested per prior authorization received on a day.
+    direction_good: neutral
+  health_care.main.fact_prior_authorization.avg.turnaround_days:
+    business_name: Average authorization turnaround (by request date)
+    description: For requests received on a day and already decided, the average days the decision took.
+    direction_good: down
+  health_care.main.fact_prior_authorization.days.request_date.decision_date:
+    business_name: Average days to decide a prior authorization
+    description: For authorizations decided on a day, the average days since the request was received.
+    direction_good: down
+  health_care.main.fact_prior_authorization.rate.authorization_status.approved:
+    business_name: Prior authorization approval rate
+    description: Of the prior authorization requests decided on a day, the share fully approved.
+    direction_good: neutral
+  health_care.main.fact_prior_authorization.rate.authorization_status.denied:
+    business_name: Prior authorization denial rate
+    description: Of the prior authorization requests decided on a day, the share denied.
+    direction_good: neutral
+  health_care.main.fact_prior_authorization.rate.authorization_status.partially_approved:
+    business_name: Prior authorization partial approval rate
+    description: Of the prior authorization requests decided on a day, the share approved for fewer units than requested.
+    direction_good: neutral
+  health_care.main.fact_prior_authorization.rate.authorization_status.pending:
+    # disabled: engine dates status shares by decision date and pending requests have none (0% by construction); only 8 pending to date
+    business_name: Share of prior authorizations still pending
+    description: Of the requests decided on a day, the share pending.
+    direction_good: down
+    enabled: false
+  health_care.main.fact_prior_authorization.rate.is_timely_decision_flag:
+    # disabled: pending requests have a null flag and are counted as late; replaced by custom.timely_decision_rate
+    business_name: Share of prior authorizations decided on time (all requests)
+    description: Of all requests received on a day, the share decided by the due date.
+    direction_good: up
+    enabled: false
+  health_care.main.fact_prior_authorization.custom.timely_decision_rate:
+    custom: true
+    table: HEALTH_CARE.MAIN.FACT_PRIOR_AUTHORIZATION
+    kind: rate
+    unit: share
+    date_expr: '"DECISION_DATE"::date'
+    num_expr: 'iff("IS_TIMELY_DECISION_FLAG"::boolean, 1, 0)'
+    den_expr: '1'
+    business_name: Prior authorizations decided on time
+    description: Of the prior authorizations decided on a day, the share decided by their regulatory due date.
+    direction_good: up
+    department: Utilization Management
+
+  # ================= Member cost and use by year (MAIN.MART_MEMBER_YEAR_SUMMARY) =================
+  health_care.main.mart_member_year_summary.sum.allowed_amount:
+    business_name: Allowed amount per year (member summary)
+    description: Total allowed medical cost for the year from the member yearly summary; a cross-check on claim totals.
+    direction_good: neutral
+  health_care.main.mart_member_year_summary.sum.claim_count:
+    business_name: Claims per year (member summary)
+    description: Total medical claims for the year from the member yearly summary.
+    direction_good: neutral
+  health_care.main.mart_member_year_summary.sum.denied_claim_count:
+    business_name: Denied claims per year (member summary)
+    description: Total denied medical claims for the year from the member yearly summary.
+    direction_good: down
+  health_care.main.mart_member_year_summary.sum.inpatient_admit_count:
+    business_name: Hospital admissions per year (member summary)
+    description: Total inpatient admissions for the year from the member yearly summary.
+    direction_good: neutral
+  health_care.main.mart_member_year_summary.sum.medical_paid_amount:
+    business_name: Medical paid per year (member summary)
+    description: Total medical claims paid for the year from the member yearly summary.
+    direction_good: neutral
+  health_care.main.mart_member_year_summary.sum.member_month_count:
+    business_name: Member months per year (member summary)
+    description: Total member months for the year from the member yearly summary.
+    direction_good: up
+  health_care.main.mart_member_year_summary.sum.member_responsibility_amount:
+    business_name: Member cost share per year (member summary)
+    description: Total deductibles, copays and coinsurance members paid for the year.
+    direction_good: neutral
+  health_care.main.mart_member_year_summary.sum.pharmacy_paid_amount:
+    business_name: Pharmacy paid per year (member summary)
+    description: Total pharmacy claims paid for the year from the member yearly summary.
+    direction_good: neutral
+  health_care.main.mart_member_year_summary.sum.total_paid_amount:
+    business_name: Total health care paid per year (member summary)
+    description: Medical plus pharmacy paid for the year from the member yearly summary.
+    direction_good: neutral
+
+  # ================= Pharmacy spend by drug class (MAIN.MART_PHARMACY_CLASS_YEAR) =================
+  health_care.main.mart_pharmacy_class_year.sum.distinct_member_count:
+    business_name: Members with prescriptions per year (summed over drug classes)
+    description: Members filling a drug in each class, added across classes for the year (a member using two classes counts twice).
+    direction_good: neutral
+  health_care.main.mart_pharmacy_class_year.sum.member_responsibility_amount:
+    business_name: Member drug cost share per year
+    description: Total member copays and coinsurance on prescriptions for the year.
+    direction_good: neutral
+  health_care.main.mart_pharmacy_class_year.sum.plan_paid_amount:
+    business_name: Pharmacy plan paid per year (drug class summary)
+    description: Total plan-paid drug cost for the year from the drug class summary.
+    direction_good: neutral
+  health_care.main.mart_pharmacy_class_year.sum.script_count:
+    business_name: Prescriptions filled per year
+    description: Total prescriptions filled for the year from the drug class summary.
+    direction_good: neutral
+
+  # ================= Plan financials PMPM (MAIN.MART_PMPM_PLAN_MONTH) =================
+  health_care.main.mart_pmpm_plan_month.sum.medical_paid_amount:
+    business_name: Medical paid by month (plan financials)
+    description: Medical claims paid for each month, from the plan financial summary.
+    direction_good: neutral
+  health_care.main.mart_pmpm_plan_month.sum.pharmacy_paid_amount:
+    business_name: Pharmacy paid by month (plan financials)
+    description: Pharmacy claims paid for each month, from the plan financial summary.
+    direction_good: neutral
+  health_care.main.mart_pmpm_plan_month.sum.premium_revenue_amount:
+    business_name: Premium revenue by month (plan financials)
+    description: Premium revenue for each month, from the plan financial summary; should agree with Premium billed.
+    direction_good: up
+  health_care.main.mart_pmpm_plan_month.sum.risk_adjustment_amount:
+    business_name: Risk adjustment by month
+    description: Risk adjustment transfers for each month, from the plan financial summary.
+    direction_good: neutral
+  health_care.main.mart_pmpm_plan_month.sum.total_healthcare_cost_amount:
+    business_name: Total health care cost by month
+    description: Medical plus pharmacy cost for each month, from the plan financial summary.
+    direction_good: neutral
+
+  # ================= Provider billing by year (MAIN.MART_PROVIDER_YEAR_SUMMARY) =================
+  health_care.main.mart_provider_year_summary.sum.allowed_amount:
+    business_name: Allowed amount per year (provider summary)
+    description: Total allowed amount across billing providers for the year.
+    direction_good: neutral
+  health_care.main.mart_provider_year_summary.sum.billed_amount:
+    business_name: Billed amount per year (provider summary)
+    description: Total charges billed by providers for the year.
+    direction_good: neutral
+  health_care.main.mart_provider_year_summary.sum.claim_count:
+    business_name: Claims per year (provider summary)
+    description: Total claims across billing providers for the year.
+    direction_good: neutral
+  health_care.main.mart_provider_year_summary.sum.denied_claim_count:
+    business_name: Denied claims per year (provider summary)
+    description: Total denied claims across billing providers for the year.
+    direction_good: down
+  health_care.main.mart_provider_year_summary.sum.distinct_member_count:
+    business_name: Patients seen per year (summed over providers)
+    description: Members seen by each billing provider, added across providers for the year (a member seeing two providers counts twice).
+    direction_good: neutral
+  health_care.main.mart_provider_year_summary.sum.plan_paid_amount:
+    business_name: Plan paid per year (provider summary)
+    description: Total plan-paid amount across billing providers for the year.
+    direction_good: neutral
+
+  # ================= Utilization per 1,000 (MAIN.MART_UTILIZATION_PER_1000) =================
+  health_care.main.mart_utilization_per_1000.sum.er_visit_count:
+    business_name: ER visits per year
+    description: Total emergency room visits for the year from the utilization summary.
+    direction_good: down
+  health_care.main.mart_utilization_per_1000.sum.inpatient_admit_count:
+    business_name: Hospital admissions per year
+    description: Total inpatient admissions for the year from the utilization summary.
+    direction_good: down
+  health_care.main.mart_utilization_per_1000.sum.member_month_count:
+    business_name: Member months per year (utilization summary)
+    description: Member months for the year used as the base of the per-1,000 rates.
+    direction_good: up
+  health_care.main.mart_utilization_per_1000.sum.op_surgery_count:
+    business_name: Outpatient surgeries per year
+    description: Total outpatient surgeries for the year from the utilization summary.
+    direction_good: neutral
+
+  # ================= Medical claims (MAIN.MEDICAL_CLAIM_HEADER) =================
+  health_care.main.medical_claim_header.count:
+    business_name: Medical claims (by visit date)
+    description: How many medical claims are for visits starting on each day; recent days fill in as claims arrive.
+    direction_good: neutral
+  health_care.main.medical_claim_header.sum.total_plan_paid_amount:
+    business_name: Medical claims paid
+    description: Total the plan paid on medical claims, by visit date - the plan's medical cost; recent days fill in as claims are paid.
+    direction_good: neutral
+    tags: [medical_cost]
+  health_care.main.medical_claim_header.sum.total_billed_amount:
+    business_name: Medical charges billed
+    description: Total charges providers billed on medical claims, by visit date.
+    direction_good: neutral
+  health_care.main.medical_claim_header.sum.total_allowed_amount:
+    business_name: Medical allowed amount
+    description: Total contracted (allowed) amount on medical claims, by visit date - plan paid plus member cost share.
+    direction_good: neutral
+  health_care.main.medical_claim_header.sum.total_member_responsibility_amount:
+    business_name: Member cost share on medical claims
+    description: Total deductibles, copays and coinsurance members owe on medical claims, by visit date.
+    direction_good: neutral
+  health_care.main.medical_claim_header.sum.cob_primary_paid_amount:
+    business_name: Paid by other insurers (coordination of benefits)
+    description: Amount another primary insurer paid on medical claims where we are secondary, by visit date.
+    direction_good: neutral
+  health_care.main.medical_claim_header.avg.inpatient_los_days:
+    business_name: Average inpatient days per claim
+    description: Average inpatient length of stay across all medical claims for visits on a day (non-inpatient claims count as 0).
+    direction_good: neutral
+  health_care.main.medical_claim_header.avg.line_count:
+    business_name: Average lines per medical claim
+    description: Average number of service lines on medical claims for visits on a day.
+    direction_good: neutral
+  health_care.main.medical_claim_header.days.received_date.adjudication_date:
+    business_name: Average days from claim receipt to decision
+    description: For medical claims decided on a day, the average days since the claim was received.
+    direction_good: down
+  health_care.main.medical_claim_header.days.received_date.payment_date:
+    business_name: Average days from claim receipt to payment
+    description: For medical claims paid on a day, the average days since the claim was received.
+    direction_good: down
+  health_care.main.medical_claim_header.days.service_start_date.received_date:
+    business_name: Average days from visit to claim receipt
+    description: For medical claims received on a day, the average days since the visit - how late providers bill.
+    direction_good: down
+  health_care.main.medical_claim_header.rate.claim_status.denied:
+    business_name: Medical claim denial rate
+    description: Of the medical claims decided on a day, the share denied.
+    direction_good: down
+  health_care.main.medical_claim_header.rate.claim_status.pended:
+    # engine dates claim status shares by adjudication date; pended claims have none, so this is ~0% and gets dropped.
+    # replaced by custom.pended_share (dated by receipt date)
+    business_name: Share of medical claims pended (by decision date)
+    description: Of the medical claims decided on a day, the share pended.
+    direction_good: down
+    enabled: false
+  health_care.main.medical_claim_header.custom.pended_share:
+    custom: true
+    table: HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER
+    kind: rate
+    unit: share
+    date_expr: '"RECEIVED_DATE"::date'
+    num_expr: 'iff("CLAIM_STATUS" = ''PENDED'', 1, 0)'
+    den_expr: '1'
+    business_name: Medical claims on hold (pended)
+    description: Of the medical claims received on a day, the share currently on hold for medical records or coding review.
+    direction_good: down
+    department: Claims Operations
+  health_care.main.medical_claim_header.rate.claim_status.reversed:
+    business_name: Share of medical claims reversed
+    description: Of the medical claims decided on a day, the share since reversed.
+    direction_good: down
+  health_care.main.medical_claim_header.rate.claim_status.voided:
+    business_name: Share of medical claims voided
+    description: Of the medical claims decided on a day, the share since voided (cancelled by the provider or plan).
+    direction_good: down
+  health_care.main.medical_claim_header.rate.is_duplicate_flag:
+    business_name: Duplicate claim rate
+    description: Of the medical claims for visits on a day, the share flagged as duplicates of a claim already received.
+    direction_good: down
+  health_care.main.medical_claim_header.rate.is_late_submission_flag:
+    business_name: Late-filed claim rate
+    description: Of the medical claims for visits on a day, the share submitted after the timely filing limit.
+    direction_good: down
+  health_care.main.medical_claim_header.rate.is_readmission_30d_flag:
+    business_name: Readmission claim rate
+    description: Of the medical claims for visits on a day, the share for a hospital readmission within 30 days.
+    direction_good: down
+  health_care.main.medical_claim_header.rate.provider_network_status.out_of_network:
+    business_name: Out-of-network claim share
+    description: Of the medical claims decided on a day, the share from providers outside our network (usually costlier).
+    direction_good: down
+  health_care.main.medical_claim_header.rate.provider_network_status.in_network:
+    # disabled: exact complement of the out-of-network share (only IN_NETWORK / OUT_OF_NETWORK exist)
+    business_name: In-network claim share
+    description: Of the medical claims for visits on a day, the share from in-network providers.
+    direction_good: up
+    enabled: false
+
+  # ================= Medical claim lines (MAIN.MEDICAL_CLAIM_LINE) =================
+  health_care.main.medical_claim_line.count:
+    business_name: Medical claim service lines
+    description: How many claim service lines are for services on each day.
+    direction_good: neutral
+  health_care.main.medical_claim_line.avg.service_units:
+    business_name: Average units per service line
+    description: Average units billed per claim service line for services on a day.
+    direction_good: neutral
+  health_care.main.medical_claim_line.rate.is_preventive_flag:
+    business_name: Preventive care share of services
+    description: Of the claim service lines for services on a day, the share that are preventive care.
+    direction_good: up
+  health_care.main.medical_claim_line.rate.line_status.denied:
+    business_name: Service line denial rate
+    description: Of the claim service lines for services on a day, the share denied.
+    direction_good: down
+  health_care.main.medical_claim_line.rate.line_status.paid:
+    business_name: Service line paid rate
+    description: Of the claim service lines for services on a day, the share paid.
+    direction_good: up
+  health_care.main.medical_claim_line.rate.line_status.pended:
+    business_name: Service lines pended
+    description: Of the claim service lines for services on a day, the share on hold for review.
+    direction_good: down
+  health_care.main.medical_claim_line.rate.line_status.reversed:
+    business_name: Service lines reversed
+    description: Of the claim service lines for services on a day, the share reversed after processing.
+    direction_good: down
+  health_care.main.medical_claim_line.sum.allowed_amount:
+    business_name: Allowed amount (service lines)
+    description: Total contracted (allowed) amount on claim service lines, by service date.
+    direction_good: neutral
+  health_care.main.medical_claim_line.sum.billed_amount:
+    business_name: Charges billed (service lines)
+    description: Total charges billed on claim service lines, by service date.
+    direction_good: neutral
+  health_care.main.medical_claim_line.sum.member_responsibility_amount:
+    business_name: Member cost share (service lines)
+    description: Total member cost share on claim service lines, by service date.
+    direction_good: neutral
+  health_care.main.medical_claim_line.sum.not_covered_amount:
+    business_name: Charges not covered
+    description: Total charges on claim service lines that the plan does not cover, by service date.
+    direction_good: neutral
+  health_care.main.medical_claim_line.sum.plan_paid_amount:
+    business_name: Plan paid (service lines)
+    description: Total plan paid on claim service lines, by service date; should agree with Medical claims paid.
+    direction_good: neutral
+
+  # ================= Member eligibility (MAIN.MEMBER_ELIGIBILITY) =================
+  health_care.main.member_eligibility.active:
+    business_name: Members in force
+    description: How many members have active coverage on each day (non-duplicate eligibility spans in force; future dates show already-scheduled changes).
+    direction_good: up
+    tags: [membership]
+  health_care.main.member_eligibility.starts:
+    business_name: Coverage starts
+    description: How many eligibility spans start each month (new enrollments, renewals, plan changes).
+    direction_good: up
+  health_care.main.member_eligibility.ends:
+    business_name: Coverage terminations
+    description: How many eligibility spans end each month (disenrollments, renewals and plan changes close a span).
+    direction_good: down
+
+  # ================= Pharmacy claims (MAIN.PHARMACY_CLAIM) =================
+  health_care.main.pharmacy_claim.count:
+    business_name: Pharmacy claims (by fill date)
+    description: How many prescription claims (fills, rejections and reversals) are for fills on each day.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.sum.plan_paid_amount:
+    business_name: Pharmacy claims paid
+    description: Total the plan paid on prescriptions, by fill date - the plan's drug cost.
+    direction_good: neutral
+    tags: [pharmacy_cost]
+  health_care.main.pharmacy_claim.sum.allowed_amount:
+    business_name: Pharmacy allowed amount
+    description: Total allowed drug cost (ingredient plus dispensing fee), by fill date.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.sum.billed_amount:
+    business_name: Pharmacy charges billed
+    description: Total amount pharmacies billed, by fill date.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.sum.dispensing_fee_amount:
+    business_name: Pharmacy dispensing fees
+    description: Total dispensing fees paid to pharmacies, by fill date.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.sum.ingredient_cost_amount:
+    business_name: Drug ingredient cost
+    description: Total drug ingredient cost, by fill date.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.avg.days_supply:
+    business_name: Average days supply per prescription
+    description: Average days of medication dispensed per pharmacy claim filled on a day.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.avg.quantity_dispensed:
+    business_name: Average quantity dispensed per prescription
+    description: Average quantity (pills, units) dispensed per pharmacy claim filled on a day.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.days.fill_date.paid_date:
+    business_name: Average days from fill to pharmacy payment
+    description: For pharmacy claims paid on a day, the average days since the prescription was filled.
+    direction_good: down
+  health_care.main.pharmacy_claim.rate.brand_generic_status.generic:
+    business_name: Generic dispensing rate
+    description: Of the prescriptions filled on a day, the share that are generic drugs (higher keeps drug cost down).
+    direction_good: up
+  health_care.main.pharmacy_claim.rate.brand_generic_status.brand:
+    business_name: Brand drug share
+    description: Of the prescriptions filled on a day, the share that are brand-name drugs.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.rate.brand_generic_status.specialty:
+    business_name: Specialty drug share
+    description: Of the prescriptions filled on a day, the share that are high-cost specialty drugs.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.rate.is_specialty_flag:
+    business_name: Specialty drug flag share
+    description: Of the prescriptions filled on a day, the share flagged as specialty (may differ slightly from the brand/generic/specialty status).
+    direction_good: neutral
+  health_care.main.pharmacy_claim.rate.is_mail_order_flag:
+    business_name: Mail-order share
+    description: Of the prescriptions filled on a day, the share filled by mail-order pharmacy.
+    direction_good: neutral
+  health_care.main.pharmacy_claim.rate.claim_status.paid:
+    business_name: Pharmacy claims paid rate
+    description: Of the pharmacy claims for fills on a day, the share paid.
+    direction_good: up
+  health_care.main.pharmacy_claim.rate.claim_status.rejected:
+    business_name: Pharmacy claim rejection rate
+    description: Of the pharmacy claims for fills on a day, the share rejected at the counter (not covered, refill too soon, prior auth needed).
+    direction_good: down
+  health_care.main.pharmacy_claim.rate.claim_status.reversed:
+    business_name: Pharmacy claim reversal rate
+    description: Of the pharmacy claims for fills on a day, the share later reversed (prescription not picked up or re-billed).
+    direction_good: down
+  health_care.main.pharmacy_claim.rate.claim_status.reversal_transaction:
+    # disabled: every reversed claim has exactly one offsetting reversal transaction (2,036 each) - same signal as the reversal rate
+    business_name: Pharmacy reversal transactions share
+    description: Of the pharmacy claims for fills on a day, the share that are reversal (offset) transactions.
+    direction_good: down
+    enabled: false
+  health_care.main.pharmacy_claim.rate.is_reversal_flag:
+    # disabled: flag is true exactly for REVERSED + REVERSAL_TRANSACTION rows - twice the reversal rate, no new signal
+    business_name: Pharmacy reversal flag share
+    description: Of the pharmacy claims for fills on a day, the share flagged as part of a reversal.
+    direction_good: down
+    enabled: false
+
+edges: []

@@ -1,19 +1,39 @@
 metric_batch: fact_claim_payment_paid_amount
+metric_name: "main.fact_claim_payment.sum_paid_amount"
+plain_name: "Claim Payments Disbursed ($)"
 db: snowflake
 ingest_sql: metrics/fact_claim_payment_paid_amount/fact_claim_payment_paid_amount.sql
+grain: week                     # latest complete week only — partial periods are never ingested
 ingest_cron: "0 6 * * 1"
 train_cron: "0 7 * * 1"
 score_cron: "0 8 * * 1"
 alert_cron: "0 8 * * 1"
-forecast_horizon: 4
+forecast_horizon: 4           # weeks ahead
 thresholds:
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-08-31"
+  expected_value: 269961.175
   warn_lower: 0
-  warn_upper: 497459
+  warn_upper: 547764.0913
   crit_lower: 0
-  crit_upper: 540223
-directionality: low_bad      # assumption — confirm with business owner
+  crit_upper: 594064.5773
+  residual_scale: 92600.9721      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: 0.016
+  seasonality_removed: false
+  reference_buckets: 104
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.fact_claim_payment.sum_paid_amount baseline_sql"
+directionality: both          # inferred by the detector — confirm with the business owner
 kpi_class: null
+status_at_generation: "needs attention"
+signals_agreeing: "week_vs_prior,trend_reversal"
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:40.861Z"
 notes: >
-  Falling trend (native r2=0.39) tracking fact_claim_payment.count_star's
-  decline. Same month/year-grain reversal pattern applies. Static bounds are a
-  weak fit for a trending series — EWMA recommended over these fixed bounds.
+  inside warn: robust_z -2.41 (|z| < 3), although the residual is the lowest in the 104-week reference
+  (residual_percentile 0.000). Dollar amounts per week are very noisy (residual_scale ~92.6k), so the
+  band is wide and the warn_lower floors at 0.

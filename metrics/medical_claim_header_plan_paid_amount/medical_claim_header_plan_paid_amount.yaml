@@ -1,0 +1,37 @@
+metric_batch: medical_claim_header_plan_paid_amount
+metric_name: "main.medical_claim_header.sum_total_plan_paid_amount"
+plain_name: "Total Plan-Paid Amount"
+db: snowflake
+ingest_sql: metrics/medical_claim_header_plan_paid_amount/medical_claim_header_plan_paid_amount.sql
+grain: week                     # latest complete week only — partial periods are never ingested
+ingest_cron: "0 6 * * 1"
+train_cron: "0 7 * * 1"
+score_cron: "0 8 * * 1"
+alert_cron: "0 8 * * 1"
+forecast_horizon: 4           # weeks ahead
+thresholds:
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-06-22"
+  expected_value: 263132.765
+  warn_lower: 4458.1241
+  warn_upper: 521807.4059
+  crit_lower: 0
+  crit_upper: 564919.8461
+  residual_scale: 86224.8803      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: 0.115
+  seasonality_removed: false
+  reference_buckets: 104
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.medical_claim_header.sum_total_plan_paid_amount baseline_sql"
+directionality: high_bad          # inferred by the detector — confirm with the business owner
+kpi_class: null
+status_at_generation: "normal"
+signals_agreeing: ""
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:41.571Z"
+notes: >
+  See reports/HEALTH_CARE/anomaly_report.md.

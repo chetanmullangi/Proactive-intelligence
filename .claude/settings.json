@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py -3.12 -m pi:*)",
+      "Bash(py -3.12 -m unittest:*)",
+      "Bash(py -3.12 ml/train.py:*)",
+      "Bash(py -3.12 ml/predict.py:*)",
+      "PowerShell(py -3.12 -m pi:*)",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(./config/semantic_overrides.yaml)",
+      "Write(./config/semantic_overrides.yaml)",
+      "Edit(./reports/**)",
+      "Write(./reports/**)",
+      "Write(./ml/data/**)",
+      "WebSearch",
+      "WebFetch"
+    ]
+  }
+}

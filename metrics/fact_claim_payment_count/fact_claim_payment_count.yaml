@@ -1,20 +1,38 @@
 metric_batch: fact_claim_payment_count
+metric_name: "main.fact_claim_payment.count_star"
+plain_name: "Claim Payments Disbursed (#)"
 db: snowflake
 ingest_sql: metrics/fact_claim_payment_count/fact_claim_payment_count.sql
-ingest_cron: "0 6 * * 1"    # weekly, matches native grain
+grain: week                     # latest complete week only — partial periods are never ingested
+ingest_cron: "0 6 * * 1"
 train_cron: "0 7 * * 1"
 score_cron: "0 8 * * 1"
 alert_cron: "0 8 * * 1"
-forecast_horizon: 4          # buckets ahead (weeks), from Phase 3
+forecast_horizon: 4           # weeks ahead
 thresholds:
-  warn_lower: 114.77
-  warn_upper: 417.23
-  crit_lower: 89.56
-  crit_upper: 442.44
-directionality: low_bad      # assumption — confirm with business owner
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-08-31"
+  expected_value: 279.5
+  warn_lower: 210.5591
+  warn_upper: 348.4409
+  crit_lower: 199.069
+  crit_upper: 359.9311
+  residual_scale: 22.9803      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: -0.027
+  seasonality_removed: false
+  reference_buckets: 104
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.fact_claim_payment.count_star baseline_sql"
+directionality: low_bad          # inferred by the detector — confirm with the business owner
 kpi_class: null
+status_at_generation: "needs attention"
+signals_agreeing: "baseline,week_vs_prior,week_vs_last_year,month_vs_prior,month_vs_last_year,trend_reversal"
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:40.760Z"
 notes: >
-  CRITICAL at last full-week observation (88 vs crit_lower 89.56).
-  Native-grain trend is falling (r2=0.70) but month/year-grain trends over the
-  full history are rising (month r2=0.45, year r2=0.37) — this is a reversal of
-  a 6-year growth trend, not noise. See reports/HEALTH_CARE/ for full analysis.
+  outside critical: robust_z -9.64 (|z| >= 3.5); week of 2026-08-31 had 58 payments vs ~279.5
+  expected; lowest residual in the 104-week reference (percentile 0.000).

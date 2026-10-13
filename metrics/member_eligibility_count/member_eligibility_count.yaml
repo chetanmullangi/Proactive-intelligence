@@ -1,0 +1,41 @@
+metric_batch: member_eligibility_count
+metric_name: "main.member_eligibility.count_star"
+plain_name: "New & Renewed Eligibility Records"
+db: snowflake
+ingest_sql: metrics/member_eligibility_count/member_eligibility_count.sql
+grain: month                     # latest complete month only — partial periods are never ingested
+ingest_cron: "0 6 3 * *"
+train_cron: "0 7 3 * *"
+score_cron: "0 8 3 * *"
+alert_cron: "0 8 3 * *"
+forecast_horizon: 3           # months ahead
+thresholds:
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-06-01"
+  expected_value: 25.3333
+  warn_lower: 5.3182
+  warn_upper: 45.3484
+  crit_lower: 1.9824
+  crit_upper: 48.6843
+  residual_scale: 6.6717      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: 0.298
+  seasonality_removed: true
+  reference_buckets: 77
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.member_eligibility.count_star baseline_sql"
+directionality: both          # inferred by the detector — confirm with the business owner
+kpi_class: null
+status_at_generation: "needs attention"
+signals_agreeing: "baseline,month_vs_prior,month_vs_last_year"
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:40.965Z"
+notes: >
+  outside critical: June 2026 had 95 eligibility records starting vs 25.33 expected for a June once
+  the January-renewal pattern is removed; robust_z 10.44 (above crit_upper 48.68). residual_percentile
+  0.961 means ~4% of reference months had an even larger residual (likely renewal-season months the
+  seasonal index does not fully absorb), so the z overstates rarity somewhat - but June 2026 is still
+  far above any June in the data. Latest month present is June 2026.

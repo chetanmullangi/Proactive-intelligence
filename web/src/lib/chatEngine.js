@@ -33,7 +33,12 @@ export function answer(kpi, question) {
       .join(' ')
   }
 
+  if (t.includes('compar') || t.includes('last year') || t.includes('last week') || t.includes('last month') || t.includes('vs ') || t.includes('versus')) {
+    return kpi.plainComparison || `No period-by-period comparison was computed for this KPI.`
+  }
+
   if (t.includes('fix') || t.includes('action') || t.includes('do about') || t.includes('recommend')) {
+    if (kpi.action) return kpi.action
     if (kpi.auditStatus && kpi.auditStatus !== 'n/a') {
       return `This pipeline doesn't produce a prescribed remediation — that's a business call. What it does have: ${kpi.auditStatus} Combined with the current state (${kpi.state}, ${kpi.confidence} confidence), that's the evidence to work from.`
     }
@@ -43,12 +48,14 @@ export function answer(kpi, question) {
   if (t.includes('project') || t.includes('forecast') || t.includes('predict') || t.includes('when') || t.includes('next week')) {
     if (!kpi.forecast) return `No forecast was computed for this KPI.`
     const f = kpi.forecast
-    return (
-      `Trend-band projection for next week: ${fmt(kpi, f.next)} (range ${fmt(kpi, f.lower)}–${fmt(kpi, f.upper)}), ${f.confidence} confidence. ` +
-      (f.method === 'recommend_ml_forecast'
-        ? `The underlying trend is strong enough that this KPI is flagged for a real trained forecast (SNOWFLAKE.ML.FORECAST) rather than trusting this straight-line extrapolation as a final answer.`
-        : `No grain showed a strong enough trend to recommend a trained model — this is the best available estimate.`)
-    )
+    const period = { day: 'day', week: 'week', month: 'month', year: 'year' }[kpi.grain] ?? 'period'
+    const how = {
+      ml_lightgbm: 'from a forecasting model trained on this measure\'s full history, which beat a simple "same as last time" guess when tested on past data',
+      naive_last_value: 'as "same as the last reading": the forecasting model was tried but couldn\'t beat that simple guess on past data, so we don\'t pretend it can',
+      trend_band: 'by extending the long-run trend, a simpler method used when there isn\'t enough history to train a model',
+    }[f.method] ?? `(method: ${f.method})`
+    return `Expected next ${period}: about ${fmt(kpi, f.next)} (likely range ${fmt(kpi, f.lower)}–${fmt(kpi, f.upper)}), estimated ${how}. ${f.confidence ? `Confidence: ${f.confidence}.` : ''}` +
+      (kpi.daysStale > 14 ? ` Note the data behind it ends ${kpi.dataThrough}, so this is a forecast from that point, not from today.` : '')
   }
 
   if (t.includes('why') || t.includes('cause') || t.includes('driv') || t.includes('reason')) {
@@ -68,7 +75,9 @@ export function answer(kpi, question) {
   }
 
   if (t.includes('stale') || t.includes('fresh') || t.includes('current') || t.includes('up to date')) {
-    return `This KPI's source data is as of ${kpi.asOfDate}. ${kpi.table} was last checked for freshness against a 14-day threshold at manifest-generation time.`
+    if (kpi.daysStale == null) return `This KPI's latest full period starts ${kpi.asOfDate}.`
+    return `The data behind this KPI runs through ${kpi.dataThrough}, about ${kpi.daysStale} days before the latest analysis run. The latest full period it measures starts ${kpi.asOfDate}.` +
+      (kpi.daysStale > 14 ? ` That is older than the 14 days we'd expect for a live feed. ${/DIM_|BRIDGE_/.test(kpi.table) ? 'For this reference list that is by design.' : 'Newer data hasn\'t loaded yet.'}` : '')
   }
 
   // default — same shape as the design's fallback
@@ -78,7 +87,7 @@ export function answer(kpi, question) {
 }
 
 export function suggestionsFor(kpi) {
-  const base = ['How confident are we in this?', 'What does the forecast say?']
+  const base = ['How does it compare with last year?', 'How confident are we in this?', 'What does the forecast say?']
   if (kpi.correlations.length) base.push('Which KPIs correlate with this?')
   if (kpi.auditStatus && kpi.auditStatus !== 'n/a') base.push('Does this reconcile against other tables?')
   base.push('What would it take to fix this?')

@@ -4,3 +4,11 @@ ml/__pycache__/
 *.pyc
 web/node_modules/
 web/dist/
+
+# profiler working files (shard parts, snapshots, pre-merge backup)
+reports/*/_profile/
+reports/*/kpi_manifest.prev.json
+reports/*/_detector/
+
+# web smoke-test bundle
+web/smoke/.out.cjs

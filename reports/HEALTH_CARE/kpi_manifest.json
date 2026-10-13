@@ -30,7 +30,11 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ORIGINAL +129; RESUBMISSION +21; REVERSAL -5; REPLACEMENT -5. No dominant driver, genuinely stable."
+          "result_preview": "ORIGINAL +129; RESUBMISSION +21; REVERSAL -5; REPLACEMENT -5. No dominant driver, genuinely stable.",
+          "dim_expr": "CLAIM_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -48,7 +52,13 @@
         "year"
       ],
       "plain_name": "Claims Submitted",
-      "plain_description": "How many medical claims were submitted each week."
+      "plain_description": "How many medical claims were submitted each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.medical_claim_header.sum_total_billed_amount",
@@ -76,7 +86,11 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, TOTAL_BILLED_AMOUNT AS m, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "REVERSAL/REPLACEMENT offsetting swing; ORIGINAL roughly flat (+$128K). No single category explains a real net decline."
+          "result_preview": "REVERSAL/REPLACEMENT offsetting swing; ORIGINAL roughly flat (+$128K). No single category explains a real net decline.",
+          "dim_expr": "CLAIM_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -94,7 +108,13 @@
         "year"
       ],
       "plain_name": "Total Billed Amount",
-      "plain_description": "The total dollar amount billed across all medical claims each week."
+      "plain_description": "The total dollar amount billed across all medical claims each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "SUM(TOTAL_BILLED_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.medical_claim_header.sum_total_allowed_amount",
@@ -122,7 +142,11 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, TOTAL_ALLOWED_AMOUNT AS m, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ORIGINAL allowed amount fell -$176.8K despite claim count rising -- allowed-per-claim genuinely dropping."
+          "result_preview": "ORIGINAL allowed amount fell -$176.8K despite claim count rising -- allowed-per-claim genuinely dropping.",
+          "dim_expr": "CLAIM_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -140,7 +164,13 @@
         "year"
       ],
       "plain_name": "Total Allowed Amount",
-      "plain_description": "The total dollar amount insurance allowed (approved as billable) across all medical claims each week."
+      "plain_description": "The total dollar amount insurance allowed (approved as billable) across all medical claims each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "SUM(TOTAL_ALLOWED_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.medical_claim_header.sum_total_plan_paid_amount",
@@ -168,7 +198,11 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, TOTAL_PLAN_PAID_AMOUNT AS m, CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "Same pattern as allowed amount: ORIGINAL plan-paid fell -$170.9K even as ORIGINAL claim count rose."
+          "result_preview": "Same pattern as allowed amount: ORIGINAL plan-paid fell -$170.9K even as ORIGINAL claim count rose.",
+          "dim_expr": "CLAIM_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -186,7 +220,13 @@
         "year"
       ],
       "plain_name": "Total Plan-Paid Amount",
-      "plain_description": "The total dollar amount the plan actually paid out across all medical claims each week."
+      "plain_description": "The total dollar amount the plan actually paid out across all medical claims each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "SUM(TOTAL_PLAN_PAID_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.medical_claim_header.avg_is_denied",
@@ -215,7 +255,11 @@
           "source_table": "MEDICAL_CLAIM_HEADER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, IFF(CLAIM_STATUS='DENIED',1,0) AS m, PROVIDER_NETWORK_STATUS AS cat FROM HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, AVG(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, AVG(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "OUT_OF_NETWORK denial rate 15.9%->18.2%; IN_NETWORK 7.9%->8.5%. OUT_OF_NETWORK denies ~2x IN_NETWORK and is growing share of volume."
+          "result_preview": "OUT_OF_NETWORK denial rate 15.9%->18.2%; IN_NETWORK 7.9%->8.5%. OUT_OF_NETWORK denies ~2x IN_NETWORK and is growing share of volume.",
+          "dim_expr": "PROVIDER_NETWORK_STATUS",
+          "from_clause": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -234,7 +278,13 @@
         "year"
       ],
       "plain_name": "Claim Denial Rate",
-      "plain_description": "The share of medical claims that get denied instead of paid."
+      "plain_description": "The share of medical claims that get denied instead of paid.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "AVG(IFF(CLAIM_STATUS='DENIED',1,0))",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "mean"
     },
     {
       "kpi_id": "main.medical_claim_line.count_star",
@@ -271,7 +321,13 @@
         "year"
       ],
       "plain_name": "Claim Lines Submitted",
-      "plain_description": "How many individual line items (services/procedures) were submitted across all claims each week."
+      "plain_description": "How many individual line items (services/procedures) were submitted across all claims each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE",
+      "date_expr": "SERVICE_FROM_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.medical_claim_line.sum_plan_paid_amount",
@@ -308,7 +364,13 @@
         "year"
       ],
       "plain_name": "Line-Level Plan-Paid Amount",
-      "plain_description": "The total dollar amount paid out at the line-item level each week -- should closely match the claim-level total."
+      "plain_description": "The total dollar amount paid out at the line-item level each week -- should closely match the claim-level total.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE",
+      "date_expr": "SERVICE_FROM_DATE",
+      "value_expr": "SUM(PLAN_PAID_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.fact_encounter.count_star",
@@ -345,7 +407,13 @@
         "year"
       ],
       "plain_name": "Encounters",
-      "plain_description": "How many patient visits or hospital stays were recorded each week."
+      "plain_description": "How many patient visits or hospital stays were recorded each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_ENCOUNTER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.fact_encounter.avg_length_of_stay_days",
@@ -382,7 +450,13 @@
         "year"
       ],
       "plain_name": "Avg Length of Stay",
-      "plain_description": "The average number of days patients stayed per encounter."
+      "plain_description": "The average number of days patients stayed per encounter.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_ENCOUNTER",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "AVG(LENGTH_OF_STAY_DAYS)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "mean"
     },
     {
       "kpi_id": "main.fact_claim_payment.sum_paid_amount",
@@ -419,7 +493,13 @@
         "year"
       ],
       "plain_name": "Claim Payments Disbursed ($)",
-      "plain_description": "The total dollar amount actually disbursed in claim payments each week."
+      "plain_description": "The total dollar amount actually disbursed in claim payments each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT",
+      "date_expr": "PAYMENT_DATE",
+      "value_expr": "SUM(PAID_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.fact_claim_payment.count_star",
@@ -447,7 +527,11 @@
           "source_table": "FACT_CLAIM_PAYMENT joined to MEDICAL_CLAIM_HEADER via CLAIM_ID",
           "label_join": "MEDICAL_CLAIM_HEADER.CLAIM_TYPE",
           "breakdown_sql": "WITH tbl AS (SELECT p.PAYMENT_DATE AS d, p.PAID_AMOUNT AS m, h.CLAIM_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT p LEFT JOIN HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER h ON h.CLAIM_ID = p.CLAIM_ID), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT COALESCE(cat,'(no matching header record)') AS cat, COUNT(*) AS n, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT COALESCE(cat,'(no matching header record)') AS cat, COUNT(*) AS n, SUM(m) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ORIGINAL alone accounts for ~110% of the net ~$495.7K decline (other categories partially offset it) -- strong evidence."
+          "result_preview": "ORIGINAL alone accounts for ~110% of the net ~$495.7K decline (other categories partially offset it) -- strong evidence.",
+          "dim_expr": "h.CLAIM_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT p LEFT JOIN HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER h ON h.CLAIM_ID = p.CLAIM_ID",
+          "base_alias": "p",
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 13,
@@ -465,7 +549,13 @@
         "year"
       ],
       "plain_name": "Claim Payments Disbursed (#)",
-      "plain_description": "How many individual claim payments were disbursed each week."
+      "plain_description": "How many individual claim payments were disbursed each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT",
+      "date_expr": "PAYMENT_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.pharmacy_claim.count_star",
@@ -502,7 +592,13 @@
         "year"
       ],
       "plain_name": "Pharmacy Claims Filled",
-      "plain_description": "How many pharmacy claims were filled each week."
+      "plain_description": "How many pharmacy claims were filled each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.PHARMACY_CLAIM",
+      "date_expr": "FILL_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.pharmacy_claim.sum_plan_paid_amount",
@@ -539,7 +635,13 @@
         "year"
       ],
       "plain_name": "Pharmacy Plan-Paid Amount",
-      "plain_description": "The total dollar amount the plan paid out for pharmacy claims each week."
+      "plain_description": "The total dollar amount the plan paid out for pharmacy claims each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.PHARMACY_CLAIM",
+      "date_expr": "FILL_DATE",
+      "value_expr": "SUM(PLAN_PAID_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.dim_provider.count_star",
@@ -567,7 +669,11 @@
           "source_table": "DIM_PROVIDER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT ENROLLMENT_DATE AS d, PROVIDER_TYPE AS cat FROM HEALTH_CARE.MAIN.DIM_PROVIDER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "SPECIALIST enrollments +12 (largest, low base). All others move 1-3. No category shift meaningful at this volume."
+          "result_preview": "SPECIALIST enrollments +12 (largest, low base). All others move 1-3. No category shift meaningful at this volume.",
+          "dim_expr": "PROVIDER_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.DIM_PROVIDER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -585,7 +691,13 @@
         "year"
       ],
       "plain_name": "Providers Enrolled",
-      "plain_description": "How many providers are currently enrolled in the network."
+      "plain_description": "How many providers are currently enrolled in the network.",
+      "table_fqn": "HEALTH_CARE.MAIN.DIM_PROVIDER",
+      "date_expr": "ENROLLMENT_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.bridge_provider_network.count_star",
@@ -613,7 +725,11 @@
           "source_table": "BRIDGE_PROVIDER_NETWORK",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT EFFECTIVE_DATE AS d, PARTICIPATION_STATUS AS cat FROM HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "PARTICIPATING +11; TERMINATED +1. Both essentially flat."
+          "result_preview": "PARTICIPATING +11; TERMINATED +1. Both essentially flat.",
+          "dim_expr": "PARTICIPATION_STATUS",
+          "from_clause": "HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -631,7 +747,13 @@
         "year"
       ],
       "plain_name": "Provider-Network Contracts",
-      "plain_description": "How many active provider-network contracts exist."
+      "plain_description": "How many active provider-network contracts exist.",
+      "table_fqn": "HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK",
+      "date_expr": "EFFECTIVE_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.fact_premium.sum_billed_premium_amount",
@@ -659,7 +781,11 @@
           "source_table": "FACT_PREMIUM",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT COVERAGE_MONTH AS d, BILLED_PREMIUM_AMOUNT AS m, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_PREMIUM), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "All 4 coverage types grew: MEDICARE +$1.78M (largest); COMMERCIAL +$723K; EXCHANGE +$365K; MEDICAID +$101K. Broad-based growth, MEDICARE largest and fastest."
+          "result_preview": "All 4 coverage types grew: MEDICARE +$1.78M (largest); COMMERCIAL +$723K; EXCHANGE +$365K; MEDICAID +$101K. Broad-based growth, MEDICARE largest and fastest.",
+          "dim_expr": "COVERAGE_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.FACT_PREMIUM",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 31,
@@ -677,7 +803,13 @@
         "year"
       ],
       "plain_name": "Premium Billed Amount",
-      "plain_description": "The total dollar amount of health insurance premiums billed to members each month."
+      "plain_description": "The total dollar amount of health insurance premiums billed to members each month.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_PREMIUM",
+      "date_expr": "COVERAGE_MONTH",
+      "value_expr": "SUM(BILLED_PREMIUM_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.fact_premium.count_star",
@@ -705,7 +837,11 @@
           "source_table": "FACT_PREMIUM",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT COVERAGE_MONTH AS d, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_PREMIUM), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "COMMERCIAL +845 (largest); MEDICARE +641; MEDICAID +412; EXCHANGE +294. Broad-based growth across all segments."
+          "result_preview": "COMMERCIAL +845 (largest); MEDICARE +641; MEDICAID +412; EXCHANGE +294. Broad-based growth across all segments.",
+          "dim_expr": "COVERAGE_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.FACT_PREMIUM",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 31,
@@ -723,7 +859,13 @@
         "year"
       ],
       "plain_name": "Billed Member-Months",
-      "plain_description": "How many member-months of premium were billed each month -- a measure of how many members had active, billed coverage."
+      "plain_description": "How many member-months of premium were billed each month -- a measure of how many members had active, billed coverage.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_PREMIUM",
+      "date_expr": "COVERAGE_MONTH",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.fact_member_month.count_star",
@@ -752,7 +894,11 @@
           "source_table": "FACT_MEMBER_MONTH",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT MONTH_START_DATE AS d, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_MEMBER_MONTH), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "COMMERCIAL +839 (largest); MEDICARE +639; MEDICAID +406; EXCHANGE +290. Broad-based growth matching FACT_PREMIUM pattern."
+          "result_preview": "COMMERCIAL +839 (largest); MEDICARE +639; MEDICAID +406; EXCHANGE +290. Broad-based growth matching FACT_PREMIUM pattern.",
+          "dim_expr": "COVERAGE_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.FACT_MEMBER_MONTH",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 31,
@@ -770,7 +916,13 @@
         "year"
       ],
       "plain_name": "Enrolled Member-Months",
-      "plain_description": "How many months of active member enrollment were recorded each month -- the core measure of how many members had health coverage in force."
+      "plain_description": "How many months of active member enrollment were recorded each month -- the core measure of how many members had health coverage in force.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_MEMBER_MONTH",
+      "date_expr": "MONTH_START_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.member_eligibility.count_star",
@@ -799,7 +951,11 @@
           "source_table": "MEMBER_ELIGIBILITY",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT EFFECTIVE_DATE AS d, COVERAGE_TYPE AS cat FROM HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "All 4 coverage types show large negative deltas -- but this is a seasonal-window artifact (baseline window captured the Jan 2026 renewal spike, recent window did not), not a real decline. Rely on month_of_year_seasonality_sql/yearly_trend_sql instead."
+          "result_preview": "All 4 coverage types show large negative deltas -- but this is a seasonal-window artifact (baseline window captured the Jan 2026 renewal spike, recent window did not), not a real decline. Rely on month_of_year_seasonality_sql/yearly_trend_sql instead.",
+          "dim_expr": "COVERAGE_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 31,
@@ -817,7 +973,13 @@
         "year"
       ],
       "plain_name": "New & Renewed Eligibility Records",
-      "plain_description": "How many member eligibility records -- new enrollments, annual renewals, and plan or group changes -- took effect each month."
+      "plain_description": "How many member eligibility records -- new enrollments, annual renewals, and plan or group changes -- took effect each month.",
+      "table_fqn": "HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY",
+      "date_expr": "EFFECTIVE_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.fact_claim_diagnosis.count_star",
@@ -846,14 +1008,22 @@
           "source_table": "FACT_CLAIM_DIAGNOSIS",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT SERVICE_START_DATE AS d, DIAGNOSIS_TYPE AS cat FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "SECONDARY +281 (larger); PRINCIPAL +144. Both grew roughly proportionally, no single type dominant."
+          "result_preview": "SECONDARY +281 (larger); PRINCIPAL +144. Both grew roughly proportionally, no single type dominant.",
+          "dim_expr": "DIAGNOSIS_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         },
         {
           "dimension_column": "DIAGNOSIS_CATEGORY",
           "source_table": "FACT_CLAIM_DIAGNOSIS joined to REF_DIAGNOSIS via DIAGNOSIS_KEY",
           "label_join": "REF_DIAGNOSIS.DIAGNOSIS_CATEGORY",
           "breakdown_sql": "WITH tbl AS (SELECT f.SERVICE_START_DATE AS d, r.DIAGNOSIS_CATEGORY AS cat FROM HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS f JOIN HEALTH_CARE.MAIN.REF_DIAGNOSIS r ON f.DIAGNOSIS_KEY = r.DIAGNOSIS_KEY), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "ENDOCRINE +77 (largest), RESPIRATORY +71, PREVENTIVE +60. Growth broad-based; NEOPLASM only notable decline (-11, small base)."
+          "result_preview": "ENDOCRINE +77 (largest), RESPIRATORY +71, PREVENTIVE +60. Growth broad-based; NEOPLASM only notable decline (-11, small base).",
+          "dim_expr": "r.DIAGNOSIS_CATEGORY",
+          "from_clause": "HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS f JOIN HEALTH_CARE.MAIN.REF_DIAGNOSIS r ON f.DIAGNOSIS_KEY = r.DIAGNOSIS_KEY",
+          "base_alias": "f",
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -872,7 +1042,13 @@
         "year"
       ],
       "plain_name": "Diagnoses Recorded",
-      "plain_description": "How many diagnosis codes were recorded across all medical claims each week."
+      "plain_description": "How many diagnosis codes were recorded across all medical claims each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS",
+      "date_expr": "SERVICE_START_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.dim_member.count_star",
@@ -901,7 +1077,11 @@
           "source_table": "DIM_MEMBER",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT RECORD_CREATED_DATE AS d, PRIMARY_SEGMENT AS cat FROM HEALTH_CARE.MAIN.DIM_MEMBER), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "COMMERCIAL +13 (largest); EXCHANGE +12; MEDICAID -5; MEDICARE -4. Growth concentrated in COMMERCIAL/EXCHANGE, the fastest-growing segments elsewhere in this schema."
+          "result_preview": "COMMERCIAL +13 (largest); EXCHANGE +12; MEDICAID -5; MEDICARE -4. Growth concentrated in COMMERCIAL/EXCHANGE, the fastest-growing segments elsewhere in this schema.",
+          "dim_expr": "PRIMARY_SEGMENT",
+          "from_clause": "HEALTH_CARE.MAIN.DIM_MEMBER",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -920,7 +1100,13 @@
         "year"
       ],
       "plain_name": "New Member Records",
-      "plain_description": "How many new member profile records were created each week."
+      "plain_description": "How many new member profile records were created each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.DIM_MEMBER",
+      "date_expr": "RECORD_CREATED_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.dim_provider_location.count_star",
@@ -949,7 +1135,11 @@
           "source_table": "DIM_PROVIDER_LOCATION",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT EFFECTIVE_DATE AS d, STATE_CODE AS cat FROM HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, COUNT(*) AS val FROM tbl, bounds WHERE d >= DATEADD(week,-8,bounds.max_d) AND d < DATEADD(week,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "NY +12 (largest); MI +10; OH +7. Small per-state counts consistent with noise, not a real geographic shift."
+          "result_preview": "NY +12 (largest); MI +10; OH +7. Small per-state counts consistent with noise, not a real geographic shift.",
+          "dim_expr": "STATE_CODE",
+          "from_clause": "HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 14,
@@ -968,7 +1158,13 @@
         "year"
       ],
       "plain_name": "Provider Locations Added",
-      "plain_description": "How many new provider practice-location records became effective each week."
+      "plain_description": "How many new provider practice-location records became effective each week.",
+      "table_fqn": "HEALTH_CARE.MAIN.DIM_PROVIDER_LOCATION",
+      "date_expr": "EFFECTIVE_DATE",
+      "value_expr": "COUNT(*)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "count"
     },
     {
       "kpi_id": "main.mart_utilization_per_1000.er_visits_per_1000",
@@ -998,7 +1194,11 @@
           "source_table": "MART_UTILIZATION_PER_1000",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, COVERAGE_TYPE AS cat, ER_VISIT_COUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "3yr(2023-25) vs 3yr(2020-22): MEDICAID 161.6->223.4 (+61.8, largest); COMMERCIAL 193.7->229.4 (+35.8); EXCHANGE 182.8->213.8 (+31.0); MEDICARE 446.2->434.2 (-12.0, only decline)."
+          "result_preview": "3yr(2023-25) vs 3yr(2020-22): MEDICAID 161.6->223.4 (+61.8, largest); COMMERCIAL 193.7->229.4 (+35.8); EXCHANGE 182.8->213.8 (+31.0); MEDICARE 446.2->434.2 (-12.0, only decline).",
+          "dim_expr": "COVERAGE_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 7,
@@ -1014,7 +1214,13 @@
         "year"
       ],
       "plain_name": "ER Visits per 1,000 Members",
-      "plain_description": "How many emergency-room visits happen each year for every 1,000 covered members."
+      "plain_description": "How many emergency-room visits happen each year for every 1,000 covered members.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000",
+      "date_expr": "DATE_FROM_PARTS(CALENDAR_YEAR,1,1)",
+      "value_expr": "SUM(ER_VISIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "ratio"
     },
     {
       "kpi_id": "main.mart_utilization_per_1000.inpatient_admits_per_1000",
@@ -1044,7 +1250,11 @@
           "source_table": "MART_UTILIZATION_PER_1000",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, COVERAGE_TYPE AS cat, INPATIENT_ADMIT_COUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*12000.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "3yr(2023-25) vs 3yr(2020-22): EXCHANGE 47.3->80.0 (+32.7, +69% -- largest relative mover); COMMERCIAL 62.5->80.8 (+18.3); MEDICARE 181.2->188.6 (+7.4); MEDICAID 61.6->58.1 (-3.5, only decline)."
+          "result_preview": "3yr(2023-25) vs 3yr(2020-22): EXCHANGE 47.3->80.0 (+32.7, +69% -- largest relative mover); COMMERCIAL 62.5->80.8 (+18.3); MEDICARE 181.2->188.6 (+7.4); MEDICAID 61.6->58.1 (-3.5, only decline).",
+          "dim_expr": "COVERAGE_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 7,
@@ -1058,7 +1268,13 @@
         "year"
       ],
       "plain_name": "Inpatient Admissions per 1,000 Members",
-      "plain_description": "How many hospital inpatient admissions happen each year for every 1,000 covered members."
+      "plain_description": "How many hospital inpatient admissions happen each year for every 1,000 covered members.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_UTILIZATION_PER_1000",
+      "date_expr": "DATE_FROM_PARTS(CALENDAR_YEAR,1,1)",
+      "value_expr": "SUM(INPATIENT_ADMIT_COUNT)*12000.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "ratio"
     },
     {
       "kpi_id": "main.mart_provider_year_summary.weighted_denial_rate",
@@ -1088,7 +1304,11 @@
           "source_table": "MART_PROVIDER_YEAR_SUMMARY",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, PROVIDER_TYPE AS cat, DENIED_CLAIM_COUNT AS num, CLAIM_COUNT AS denom FROM HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(denom),0) AS val, SUM(denom) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(denom),0) AS val, SUM(denom) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "No single dominant driver across 18 provider types: ASC 17.1%->11.7% (-5.4pp, largest single mover, small base); HOME_HEALTH +3.0pp; DME +2.9pp; ANESTHESIA -2.8pp. Changes are spread across specialties, not concentrated."
+          "result_preview": "No single dominant driver across 18 provider types: ASC 17.1%->11.7% (-5.4pp, largest single mover, small base); HOME_HEALTH +3.0pp; DME +2.9pp; ANESTHESIA -2.8pp. Changes are spread across specialties, not concentrated.",
+          "dim_expr": "PROVIDER_TYPE",
+          "from_clause": "HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 7,
@@ -1102,7 +1322,13 @@
         "year"
       ],
       "plain_name": "Provider Network Denial Rate",
-      "plain_description": "The share of claims across all providers that get denied each year, weighted by claim volume."
+      "plain_description": "The share of claims across all providers that get denied each year, weighted by claim volume.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_PROVIDER_YEAR_SUMMARY",
+      "date_expr": "DATE_FROM_PARTS(CALENDAR_YEAR,1,1)",
+      "value_expr": "SUM(DENIED_CLAIM_COUNT)*1.0/NULLIF(SUM(CLAIM_COUNT),0)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "ratio"
     },
     {
       "kpi_id": "main.mart_member_year_summary.pmpm",
@@ -1132,7 +1358,11 @@
           "source_table": "MART_MEMBER_YEAR_SUMMARY",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, PRIMARY_SEGMENT AS cat, TOTAL_PAID_AMOUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "3yr(2023-25) vs 3yr(2020-22): MEDICARE $1,615->$2,058 (+$443, largest absolute); EXCHANGE $310->$599 (+93%, largest relative); MEDICAID $408->$549 (+$141); COMMERCIAL $381->$513 (+$132). All segments rising."
+          "result_preview": "3yr(2023-25) vs 3yr(2020-22): MEDICARE $1,615->$2,058 (+$443, largest absolute); EXCHANGE $310->$599 (+93%, largest relative); MEDICAID $408->$549 (+$141); COMMERCIAL $381->$513 (+$132). All segments rising.",
+          "dim_expr": "PRIMARY_SEGMENT",
+          "from_clause": "HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 7,
@@ -1146,7 +1376,13 @@
         "year"
       ],
       "plain_name": "Per-Member-Per-Month Cost (PMPM)",
-      "plain_description": "The average total amount paid per member per month each year -- a standard measure of how much it costs to cover each member."
+      "plain_description": "The average total amount paid per member per month each year -- a standard measure of how much it costs to cover each member.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_MEMBER_YEAR_SUMMARY",
+      "date_expr": "DATE_FROM_PARTS(CALENDAR_YEAR,1,1)",
+      "value_expr": "SUM(TOTAL_PAID_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "ratio"
     },
     {
       "kpi_id": "main.mart_pharmacy_class_year.sum_plan_paid_amount",
@@ -1176,7 +1412,11 @@
           "source_table": "MART_PHARMACY_CLASS_YEAR",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, THERAPEUTIC_CLASS AS cat, PLAN_PAID_AMOUNT AS m FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "Top movers (3yr vs 3yr): ORAL ONCOLYTICS +$1.79M (largest); GLP-1 AGONISTS +$0.94M; BIOLOGIC IMMUNOMODULATORS +$0.86M; HEMATOPOIETIC AGENTS +$0.26M; OPIOID DEPENDENCE +$0.13M. Consistent with well-documented specialty-drug and GLP-1 cost trends."
+          "result_preview": "Top movers (3yr vs 3yr): ORAL ONCOLYTICS +$1.79M (largest); GLP-1 AGONISTS +$0.94M; BIOLOGIC IMMUNOMODULATORS +$0.86M; HEMATOPOIETIC AGENTS +$0.26M; OPIOID DEPENDENCE +$0.13M. Consistent with well-documented specialty-drug and GLP-1 cost trends.",
+          "dim_expr": "THERAPEUTIC_CLASS",
+          "from_clause": "HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 7,
@@ -1192,7 +1432,13 @@
         "year"
       ],
       "plain_name": "Pharmacy Plan-Paid Spend",
-      "plain_description": "The total dollar amount the plan paid for prescription drugs each year."
+      "plain_description": "The total dollar amount the plan paid for prescription drugs each year.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR",
+      "date_expr": "DATE_FROM_PARTS(CALENDAR_YEAR,1,1)",
+      "value_expr": "SUM(PLAN_PAID_AMOUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.mart_pharmacy_class_year.sum_script_count",
@@ -1222,7 +1468,11 @@
           "source_table": "MART_PHARMACY_CLASS_YEAR",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT CALENDAR_YEAR AS yr, THERAPEUTIC_CLASS AS cat, SCRIPT_COUNT AS m FROM HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR), bounds AS (SELECT MAX(yr) AS max_complete_yr FROM tbl WHERE yr < (SELECT MAX(yr) FROM tbl)), recent AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 3 AND yr <= bounds.max_complete_yr GROUP BY 1), baseline AS (SELECT cat, SUM(m) AS val, COUNT(*) AS n FROM tbl, bounds WHERE yr > bounds.max_complete_yr - 6 AND yr <= bounds.max_complete_yr - 3 GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "Top movers (3yr vs 3yr): OPIOID ANALGESICS +4,015 scripts (largest); STATINS +1,809; SSRI +1,747; CORTICOSTEROIDS +1,662; QUINOLONES +1,545. Broad-based volume growth across common maintenance-medication classes."
+          "result_preview": "Top movers (3yr vs 3yr): OPIOID ANALGESICS +4,015 scripts (largest); STATINS +1,809; SSRI +1,747; CORTICOSTEROIDS +1,662; QUINOLONES +1,545. Broad-based volume growth across common maintenance-medication classes.",
+          "dim_expr": "THERAPEUTIC_CLASS",
+          "from_clause": "HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 7,
@@ -1238,7 +1488,13 @@
         "year"
       ],
       "plain_name": "Prescriptions Filled",
-      "plain_description": "How many prescriptions (scripts) were filled across all drug classes each year."
+      "plain_description": "How many prescriptions (scripts) were filled across all drug classes each year.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_PHARMACY_CLASS_YEAR",
+      "date_expr": "DATE_FROM_PARTS(CALENDAR_YEAR,1,1)",
+      "value_expr": "SUM(SCRIPT_COUNT)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "sum"
     },
     {
       "kpi_id": "main.mart_pmpm_plan_month.pmpm_total_healthcare_cost",
@@ -1267,7 +1523,11 @@
           "source_table": "MART_PMPM_PLAN_MONTH",
           "label_join": null,
           "breakdown_sql": "WITH tbl AS (SELECT TO_DATE(YEAR_MONTH||'-01') AS d, SEGMENT AS cat, TOTAL_HEALTHCARE_COST_AMOUNT AS num, MEMBER_MONTH_COUNT AS mm FROM HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH), bounds AS (SELECT MAX(d) AS max_d FROM tbl), recent AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-4,bounds.max_d) GROUP BY 1), baseline AS (SELECT cat, SUM(num)*1.0/NULLIF(SUM(mm),0) AS val, SUM(mm) AS n FROM tbl, bounds WHERE d >= DATEADD(month,-8,bounds.max_d) AND d < DATEADD(month,-4,bounds.max_d) GROUP BY 1) SELECT COALESCE(r.cat,b.cat) AS category, COALESCE(b.val,0) AS baseline_value, COALESCE(r.val,0) AS recent_value, COALESCE(r.val,0)-COALESCE(b.val,0) AS delta, COALESCE(b.n,0) AS baseline_n, COALESCE(r.n,0) AS recent_n FROM baseline b FULL OUTER JOIN recent r ON b.cat=r.cat ORDER BY ABS(delta) DESC;",
-          "result_preview": "Trailing-4-vs-prior-4-month: MEDICAID $402.9->$580.5 (+$177.6, largest); EXCHANGE $487.4->$574.0 (+$86.6); COMMERCIAL $577.9->$504.1 (-$73.8); MEDICARE $1686.6->$1620.1 (-$66.5). Growth concentrated in MEDICAID, partially offset by COMMERCIAL/MEDICARE declines."
+          "result_preview": "Trailing-4-vs-prior-4-month: MEDICAID $402.9->$580.5 (+$177.6, largest); EXCHANGE $487.4->$574.0 (+$86.6); COMMERCIAL $577.9->$504.1 (-$73.8); MEDICARE $1686.6->$1620.1 (-$66.5). Growth concentrated in MEDICAID, partially offset by COMMERCIAL/MEDICARE declines.",
+          "dim_expr": "SEGMENT",
+          "from_clause": "HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH",
+          "base_alias": null,
+          "dim_parts_source": "derived_from_breakdown_sql"
         }
       ],
       "buckets_available": 31,
@@ -1283,7 +1543,13 @@
         "month"
       ],
       "plain_name": "Per-Member-Per-Month Total Healthcare Cost",
-      "plain_description": "The average total healthcare cost (medical plus pharmacy) per member per month, by insurance plan."
+      "plain_description": "The average total healthcare cost (medical plus pharmacy) per member per month, by insurance plan.",
+      "table_fqn": "HEALTH_CARE.MAIN.MART_PMPM_PLAN_MONTH",
+      "date_expr": "TO_DATE(YEAR_MONTH||'-01')",
+      "value_expr": "SUM(TOTAL_HEALTHCARE_COST_AMOUNT)*1.0/NULLIF(SUM(MEMBER_MONTH_COUNT),0)",
+      "row_filter": null,
+      "sql_parts_source": "derived_from_series_sql",
+      "kpi_kind": "ratio"
     }
   ],
   "table_usage_series": [

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "chat-server": "node server/chat-server.js"
+    "chat-server": "node server/chat-server.js",
+    "smoke": "esbuild smoke/entry.jsx --bundle --platform=node --format=cjs --jsx=automatic --loader:.js=jsx --loader:.css=empty --outfile=smoke/.out.cjs --log-level=error && node smoke/.out.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",

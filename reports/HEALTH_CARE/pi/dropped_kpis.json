@@ -1,0 +1,50 @@
+{
+ "health_care.core_admin.employer_group.ends": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.core_admin.provider_payment.sum.total_payment_amount": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.fact_appeal.custom.timely_decision_rate": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.fact_appeal.rate.appeal_status.closed": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.fact_grievance.rate.grievance_status.resolved": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.fact_prior_authorization.rate.authorization_status.pending": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.fact_prior_authorization.rate.is_peer_to_peer_flag": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.mart_pmpm_plan_month.sum.distinct_member_count": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.mart_pmpm_plan_month.sum.member_month_count": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.medical_claim_header.rate.claim_status.pended": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.medical_claim_header.rate.is_eligibility_valid_flag": {
+  "reason": "constant_or_empty",
+  "date": "2026-10-11"
+ },
+ "health_care.main.mart_pmpm_plan_month.sum.premium_revenue_amount": {
+  "reason": "duplicate",
+  "date": "2026-10-11"
+ }
+}

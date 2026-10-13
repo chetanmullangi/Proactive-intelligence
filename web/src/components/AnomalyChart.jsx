@@ -27,11 +27,17 @@ export default function AnomalyChart({ kpi }) {
   })
 
   const histD = path(vals, x, y, 0)
-  const lastIdx = vals.length - 1
+  // Anchor the forecast and the limits marker on the last *complete* period. A trailing partial
+  // period (e.g. a 2-day week) isn't a real reading and would make the forecast start from a false low.
+  let lastIdx = vals.length - 1
+  while (lastIdx > 0 && s[lastIdx].partial) lastIdx--
   const fc = kpi.forecast
-  const fcD = fc ? path([vals[lastIdx], fc.next], x, y, lastIdx) : null
-  const bandTop = fc ? `${x(lastIdx).toFixed(1)} ${y(vals[lastIdx]).toFixed(1)} L ${x(lastIdx + 1).toFixed(1)} ${y(fc.upper).toFixed(1)}` : null
-  const bandBottom = fc ? `${x(lastIdx + 1).toFixed(1)} ${y(fc.lower).toFixed(1)} L ${x(lastIdx).toFixed(1)} ${y(vals[lastIdx]).toFixed(1)}` : null
+  const fcX = lastIdx + 1 // the forecast is for the period right after the last complete one (which may be the partial one)
+  const fcD = fc ? `M ${x(lastIdx).toFixed(1)} ${y(vals[lastIdx]).toFixed(1)} L ${x(fcX).toFixed(1)} ${y(fc.next).toFixed(1)}` : null
+  const bandTop = fc ? `${x(lastIdx).toFixed(1)} ${y(vals[lastIdx]).toFixed(1)} L ${x(fcX).toFixed(1)} ${y(fc.upper).toFixed(1)}` : null
+  const bandBottom = fc ? `${x(fcX).toFixed(1)} ${y(fc.lower).toFixed(1)} L ${x(lastIdx).toFixed(1)} ${y(vals[lastIdx]).toFixed(1)}` : null
+  const unit = { day: 'day', week: 'week', month: 'month', year: 'year' }[kpi.grain] ?? 'week'
+  const hasPartial = s.some((p) => p.partial)
 
   const warnY = { top: y(kpi.warnUpper), bottom: y(kpi.warnLower) }
   const critBreach = kpi.value < kpi.critLower || kpi.value > kpi.critUpper
@@ -66,7 +72,7 @@ export default function AnomalyChart({ kpi }) {
         {critBreach && (
           <circle cx={x(lastIdx)} cy={y(vals[lastIdx])} r={4} fill="#ffffff" stroke={meta.mark} strokeWidth={2} />
         )}
-        {fc && <circle cx={x(lastIdx + 1)} cy={y(fc.next)} r={3.5} fill="#5353ef" />}
+        {fc && <circle cx={x(fcX)} cy={y(fc.next)} r={3.5} fill="#5353ef" />}
 
         {s.filter((_, i) => i % Math.ceil(s.length / 6) === 0 || i === s.length - 1).map((p, i) => (
           <text key={i} x={x(s.indexOf(p))} y={H - 8} fill="#737373" textAnchor="middle" fontFamily="Figtree,sans-serif" fontSize={10}>
@@ -75,7 +81,9 @@ export default function AnomalyChart({ kpi }) {
         ))}
       </svg>
       <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 6 }}>
-        {s.length} weeks of actual data through {kpi.asOfDate}. Hollow point is a week still in progress — not a real reading yet. The dotted line is next week's estimate, with the shaded band showing the normal range.
+        {s.length - (hasPartial ? 1 : 0)} {unit}s of actual data, latest full {unit} starting {kpi.asOfDate}.
+        {hasPartial ? ` Hollow point is a ${unit} with only part of its data — not a real reading.` : ''}
+        {fc ? ` The dotted line is the estimate for the next ${unit}.` : ''} The shaded band is the normal range for the latest full {unit}.
       </div>
     </div>
   )

@@ -1,20 +1,40 @@
 metric_batch: pharmacy_claim_count
+metric_name: "main.pharmacy_claim.count_star"
+plain_name: "Pharmacy Claims Filled"
 db: snowflake
 ingest_sql: metrics/pharmacy_claim_count/pharmacy_claim_count.sql
+grain: week                     # latest complete week only — partial periods are never ingested
 ingest_cron: "0 6 * * 1"
 train_cron: "0 7 * * 1"
 score_cron: "0 8 * * 1"
 alert_cron: "0 8 * * 1"
-forecast_horizon: 4
+forecast_horizon: 4           # weeks ahead
 thresholds:
-  warn_lower: 527.36
-  warn_upper: 589.64
-  crit_lower: 522.17
-  crit_upper: 594.83
-directionality: both         # assumption — confirm with business owner
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-06-22"
+  expected_value: 557.39
+  warn_lower: 470.8823
+  warn_upper: 643.8976
+  crit_lower: 456.4643
+  crit_upper: 658.3156
+  residual_scale: 28.8359      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: true
+  reference_slope_pct_per_bucket: 0.168
+  seasonality_removed: false
+  reference_buckets: 104
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.pharmacy_claim.count_star baseline_sql"
+directionality: both          # inferred by the detector — confirm with the business owner
 kpi_class: null
+status_at_generation: "worth watching"
+signals_agreeing: "rolling_7d_vs_prior (down, likely trailing-edge lag); month_vs_prior (up) - signals point in opposite directions, none corroborated"
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:41.063Z"
 notes: >
-  WARN at last full-week observation (592, just above warn_upper). Mild real
-  uptrend (native r2=0.20, month r2=0.62) — table's data is stale 69 days
-  vs. wall-clock, so treat the "current" reading as a snapshot from 2026-06-22,
-  not literally today.
+  inside warn: week of 2026-06-22 had 592 fills vs 557.39 expected after trend removal; robust_z 1.2,
+  residual_percentile 0.904. Note the data's latest fill date is 2026-07-03 (per period_comparison
+  rolling_7d current_end), so the latest complete week tested is the week of 22 June - about 13 weeks
+  before this run date.

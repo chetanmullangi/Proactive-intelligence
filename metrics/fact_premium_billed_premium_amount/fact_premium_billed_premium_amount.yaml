@@ -1,0 +1,40 @@
+metric_batch: fact_premium_billed_premium_amount
+metric_name: "main.fact_premium.sum_billed_premium_amount"
+plain_name: "Premium Billed Amount"
+db: snowflake
+ingest_sql: metrics/fact_premium_billed_premium_amount/fact_premium_billed_premium_amount.sql
+grain: month                     # latest complete month only — partial periods are never ingested
+ingest_cron: "0 6 3 * *"
+train_cron: "0 7 3 * *"
+score_cron: "0 8 3 * *"
+alert_cron: "0 8 3 * *"
+forecast_horizon: 3           # months ahead
+thresholds:
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-06-01"
+  expected_value: 2232003.6771
+  warn_lower: 2047192.9812
+  warn_upper: 2416814.373
+  crit_lower: 2016391.1985
+  crit_upper: 2447616.1557
+  residual_scale: 61603.5653      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: true
+  reference_slope_pct_per_bucket: 1.463
+  seasonality_removed: true
+  reference_buckets: 77
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.fact_premium.sum_billed_premium_amount baseline_sql"
+directionality: low_bad          # inferred by the detector — confirm with the business owner
+kpi_class: null
+status_at_generation: "normal"
+signals_agreeing: "none"
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:41.681Z"
+notes: >
+  inside warn: June 2026 billed $2,266,159.94 vs $2,232,003.68 expected (trend and month-of-year
+  pattern removed); robust_z 0.55. The latest coverage month in the table is June 2026
+  (latest_period_excluded false, so June is the last month present) - about three months before the
+  run date.

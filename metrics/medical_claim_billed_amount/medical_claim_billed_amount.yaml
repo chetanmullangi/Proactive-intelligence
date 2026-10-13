@@ -1,21 +1,37 @@
 metric_batch: medical_claim_billed_amount
+metric_name: "main.medical_claim_header.sum_total_billed_amount"
+plain_name: "Total Billed Amount"
 db: snowflake
 ingest_sql: metrics/medical_claim_billed_amount/medical_claim_billed_amount.sql
+grain: week                     # latest complete week only — partial periods are never ingested
 ingest_cron: "0 6 * * 1"
 train_cron: "0 7 * * 1"
 score_cron: "0 8 * * 1"
 alert_cron: "0 8 * * 1"
-forecast_horizon: 4
+forecast_horizon: 4           # weeks ahead
 thresholds:
-  warn_lower: 236448
-  warn_upper: 1260316
-  crit_lower: 151126
-  crit_upper: 1345639
-directionality: both         # assumption — confirm with business owner
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-06-22"
+  expected_value: 738275.915
+  warn_lower: 107546.8294
+  warn_upper: 1369005.0006
+  crit_lower: 2425.3151
+  crit_upper: 1474126.5149
+  residual_scale: 210243.0285      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: 0.141
+  seasonality_removed: false
+  reference_buckets: 104
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.medical_claim_header.sum_total_billed_amount baseline_sql"
+directionality: both          # inferred by the detector — confirm with the business owner
 kpi_class: null
+status_at_generation: "normal"
+signals_agreeing: ""
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:41.365Z"
 notes: >
-  Historical spike week 2026-05-04 (robust z ~4.1) driven by high-cost claims,
-  not volume — see attribution in reports/HEALTH_CARE/. Reconciles against
-  medical_claim_line at 97.9% (join key CLAIM_ID); dup_rate on source table
-  is 0.45%. Strong monthly growth trend (r2=0.72) underneath native-grain
-  volatility.
+  See reports/HEALTH_CARE/anomaly_report.md.

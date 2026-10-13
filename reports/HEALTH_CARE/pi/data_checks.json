@@ -1,0 +1,232 @@
+[
+ {
+  "CHECK_ID": "future:HEALTH_CARE.CORE_ADMIN.CLAIM_STATUS_HISTORY.STATUS_DATE",
+  "TABLE_FQN": "HEALTH_CARE.CORE_ADMIN.CLAIM_STATUS_HISTORY",
+  "CHECK_TYPE": "future_date",
+  "FAILED": 290,
+  "CHECKED": 299568,
+  "SEVERITY": "medium",
+  "DETAIL": "{\"column\": \"STATUS_DATE\", \"latest\": \"2027-04-10\", \"role\": \"decision\"}",
+  "SHARE": 0.0009680606740372804
+ },
+ {
+  "CHECK_ID": "future:HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.SUBMISSION_DATE",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "future_date",
+  "FAILED": 76,
+  "CHECKED": 103761,
+  "SEVERITY": "medium",
+  "DETAIL": "{\"column\": \"SUBMISSION_DATE\", \"latest\": \"2027-04-10\", \"role\": \"arrival\"}",
+  "SHARE": 0.0007324524628714064
+ },
+ {
+  "CHECK_ID": "future:HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.RECEIVED_DATE",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "future_date",
+  "FAILED": 76,
+  "CHECKED": 103761,
+  "SEVERITY": "medium",
+  "DETAIL": "{\"column\": \"RECEIVED_DATE\", \"latest\": \"2027-04-10\", \"role\": \"arrival\"}",
+  "SHARE": 0.0007324524628714064
+ },
+ {
+  "CHECK_ID": "future:HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.ADJUDICATION_DATE",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "future_date",
+  "FAILED": 147,
+  "CHECKED": 103761,
+  "SEVERITY": "medium",
+  "DETAIL": "{\"column\": \"ADJUDICATION_DATE\", \"latest\": \"2027-02-21\", \"role\": \"decision\"}",
+  "SHARE": 0.0014167172637117992
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.PRIOR_AUTHORIZATION>HEALTH_CARE.MAIN.FACT_PRIOR_AUTHORIZATION",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_PRIOR_AUTHORIZATION",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 407,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.PRIOR_AUTHORIZATION\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.CLAIM>HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 103761,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.CLAIM\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.MEMBER_GRIEVANCE>HEALTH_CARE.MAIN.FACT_GRIEVANCE",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_GRIEVANCE",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 47,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.MEMBER_GRIEVANCE\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.PROVIDER_NETWORK_CONTRACT>HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.BRIDGE_PROVIDER_NETWORK",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 11283,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.PROVIDER_NETWORK_CONTRACT\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.MEMBER_ELIGIBILITY>HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEMBER_ELIGIBILITY",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 14455,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.MEMBER_ELIGIBILITY\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.PREMIUM_BILLING>HEALTH_CARE.MAIN.FACT_PREMIUM",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_PREMIUM",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 145781,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.PREMIUM_BILLING\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.CLAIM_LINE>HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 293894,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.CLAIM_LINE\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.CLAIM_APPEAL>HEALTH_CARE.MAIN.FACT_APPEAL",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_APPEAL",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 32,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.CLAIM_APPEAL\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.PHARMACY_CLAIM>HEALTH_CARE.MAIN.PHARMACY_CLAIM",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.PHARMACY_CLAIM",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 144716,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.PHARMACY_CLAIM\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.CLAIM_ENCOUNTER_DETAIL>HEALTH_CARE.MAIN.FACT_ENCOUNTER",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_ENCOUNTER",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 82267,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.CLAIM_ENCOUNTER_DETAIL\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.CLAIM_PAYMENT>HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_CLAIM_PAYMENT",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 78522,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.CLAIM_PAYMENT\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "load_gap:HEALTH_CARE.CORE_ADMIN.CLAIM_DIAGNOSIS>HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_CLAIM_DIAGNOSIS",
+  "CHECK_TYPE": "load_gap",
+  "FAILED": 0,
+  "CHECKED": 230790,
+  "SEVERITY": "info",
+  "DETAIL": "{\"source\": \"HEALTH_CARE.CORE_ADMIN.CLAIM_DIAGNOSIS\", \"missing_older_than_2_days\": 0, \"latest_missing_date\": \"None\"}",
+  "SHARE": 0.0
+ },
+ {
+  "CHECK_ID": "orphans:HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.ENCOUNTER_ID",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "orphan_key",
+  "FAILED": 82,
+  "CHECKED": 103761,
+  "SEVERITY": "low",
+  "DETAIL": "{\"column\": \"ENCOUNTER_ID\", \"parent\": \"HEALTH_CARE.MAIN.FACT_ENCOUNTER.ENCOUNTER_ID\"}",
+  "SHARE": 0.0007902776573086227
+ },
+ {
+  "CHECK_ID": "orphans:HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.MEMBER_MONTH_KEY",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "orphan_key",
+  "FAILED": 5,
+  "CHECKED": 103761,
+  "SEVERITY": "low",
+  "DETAIL": "{\"column\": \"MEMBER_MONTH_KEY\", \"parent\": \"HEALTH_CARE.MAIN.FACT_MEMBER_MONTH.MEMBER_MONTH_KEY\"}",
+  "SHARE": 4.818766203101358e-05
+ },
+ {
+  "CHECK_ID": "orphans:HEALTH_CARE.MAIN.PHARMACY_CLAIM.MEMBER_MONTH_KEY",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.PHARMACY_CLAIM",
+  "CHECK_TYPE": "orphan_key",
+  "FAILED": 22,
+  "CHECKED": 144716,
+  "SEVERITY": "low",
+  "DETAIL": "{\"column\": \"MEMBER_MONTH_KEY\", \"parent\": \"HEALTH_CARE.MAIN.FACT_MEMBER_MONTH.MEMBER_MONTH_KEY\"}",
+  "SHARE": 0.00015202189115232594
+ },
+ {
+  "CHECK_ID": "orphans:HEALTH_CARE.MAIN.FACT_ENCOUNTER.MEMBER_MONTH_KEY",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_ENCOUNTER",
+  "CHECK_TYPE": "orphan_key",
+  "FAILED": 1,
+  "CHECKED": 82267,
+  "SEVERITY": "low",
+  "DETAIL": "{\"column\": \"MEMBER_MONTH_KEY\", \"parent\": \"HEALTH_CARE.MAIN.FACT_MEMBER_MONTH.MEMBER_MONTH_KEY\"}",
+  "SHARE": 1.2155542319520586e-05
+ },
+ {
+  "CHECK_ID": "orphans:HEALTH_CARE.MAIN.FACT_PREMIUM.MEMBER_MONTH_KEY",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_PREMIUM",
+  "CHECK_TYPE": "orphan_key",
+  "FAILED": 4,
+  "CHECKED": 145781,
+  "SEVERITY": "low",
+  "DETAIL": "{\"column\": \"MEMBER_MONTH_KEY\", \"parent\": \"HEALTH_CARE.MAIN.FACT_MEMBER_MONTH.MEMBER_MONTH_KEY\"}",
+  "SHARE": 2.7438417900823837e-05
+ },
+ {
+  "CHECK_ID": "orphans:HEALTH_CARE.MAIN.FACT_APPEAL.ORIGINAL_DENIAL_REASON_CODE",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.FACT_APPEAL",
+  "CHECK_TYPE": "orphan_key",
+  "FAILED": 1,
+  "CHECKED": 32,
+  "SEVERITY": "low",
+  "DETAIL": "{\"column\": \"ORIGINAL_DENIAL_REASON_CODE\", \"parent\": \"HEALTH_CARE.MAIN.REF_DENIAL_REASON.DENIAL_REASON_CODE\"}",
+  "SHARE": 0.03125
+ },
+ {
+  "CHECK_ID": "reconcile:HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER.TOTAL_PLAN_PAID_AMOUNT~HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE.PLAN_PAID_AMOUNT",
+  "TABLE_FQN": "HEALTH_CARE.MAIN.MEDICAL_CLAIM_HEADER",
+  "CHECK_TYPE": "header_line_mismatch",
+  "FAILED": 1677,
+  "CHECKED": 103761,
+  "SEVERITY": "medium",
+  "DETAIL": "{\"header\": \"TOTAL_PLAN_PAID_AMOUNT\", \"lines\": \"HEALTH_CARE.MAIN.MEDICAL_CLAIM_LINE.PLAN_PAID_AMOUNT\", \"worst_difference\": 142550.51}",
+  "SHARE": 0.016162141845201955
+ }
+]

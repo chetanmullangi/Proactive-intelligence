@@ -1,0 +1,347 @@
+{
+ "health_care.main.fact_premium.count": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 26.7182,
+   "recent_average": 40.8331,
+   "trend": 29.7889,
+   "seasonal": 32.1005
+  }
+ },
+ "health_care.main.fact_premium.sum.billed_premium_amount": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 168741.6703,
+   "recent_average": 185581.8212,
+   "trend": 197050.8152,
+   "seasonal": 243323.603
+  }
+ },
+ "health_care.main.fact_premium.sum.employer_contribution_amount": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 14202.3865,
+   "recent_average": 21661.6077,
+   "trend": 26889.4908,
+   "seasonal": 50594.1945
+  }
+ },
+ "health_care.main.fact_premium.sum.member_contribution_amount": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 40612.1688,
+   "recent_average": 43031.1274,
+   "trend": 47779.8017,
+   "seasonal": 53426.8867
+  }
+ },
+ "health_care.main.fact_premium.sum.subsidy_aptc_amount": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 8659.9032,
+   "recent_average": 13710.6476,
+   "trend": 12968.3979,
+   "seasonal": 27954.5523
+  }
+ },
+ "health_care.main.fact_premium.sum.government_capitation_amount": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 49492.4624,
+   "recent_average": 82598.519,
+   "trend": 56933.7002,
+   "seasonal": 51149.4359
+  }
+ },
+ "health_care.main.medical_claim_line.count": {
+  "method": "trend",
+  "skill_vs_naive": 0.193,
+  "mae": {
+   "last_value": 118.3216,
+   "recent_average": 98.9361,
+   "trend": 95.5181,
+   "seasonal": 152.5772,
+   "lightgbm": 112.5623
+  }
+ },
+ "health_care.main.medical_claim_line.sum.plan_paid_amount": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.125,
+  "mae": {
+   "last_value": 83240.6068,
+   "recent_average": 75369.9186,
+   "trend": 91151.7948,
+   "seasonal": 93398.4822,
+   "lightgbm": 72877.1311
+  }
+ },
+ "health_care.main.medical_claim_line.sum.allowed_amount": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.05,
+  "mae": {
+   "last_value": 88797.6838,
+   "recent_average": 84321.9469,
+   "trend": 107469.9061,
+   "seasonal": 101563.5802,
+   "lightgbm": 90801.171
+  }
+ },
+ "health_care.main.medical_claim_line.sum.billed_amount": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.184,
+  "mae": {
+   "last_value": 201665.1923,
+   "recent_average": 178188.1662,
+   "trend": 224178.8509,
+   "seasonal": 234637.8942,
+   "lightgbm": 164521.5397
+  }
+ },
+ "health_care.main.medical_claim_line.sum.member_responsibility_amount": {
+  "method": "seasonal",
+  "skill_vs_naive": 0.131,
+  "mae": {
+   "last_value": 17314.6014,
+   "recent_average": 17447.8396,
+   "trend": 27191.0715,
+   "seasonal": 15051.9264,
+   "lightgbm": 19908.6862
+  }
+ },
+ "health_care.main.medical_claim_line.sum.not_covered_amount": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.167,
+  "mae": {
+   "last_value": 240015.6738,
+   "recent_average": 201253.3799,
+   "trend": 220142.7032,
+   "seasonal": 227822.7569,
+   "lightgbm": 200030.2792
+  }
+ },
+ "health_care.core_admin.claim_status_history.count": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.062,
+  "mae": {
+   "last_value": 129.845,
+   "recent_average": 147.0651,
+   "trend": 167.8156,
+   "seasonal": 154.913,
+   "lightgbm": 121.7978
+  }
+ },
+ "health_care.core_admin.provider_payment.count": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.153,
+  "mae": {
+   "last_value": 29.8491,
+   "recent_average": 25.2913,
+   "trend": 29.3884,
+   "seasonal": 26.3015,
+   "lightgbm": 25.563
+  }
+ },
+ "health_care.main.fact_claim_payment.count": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.211,
+  "mae": {
+   "last_value": 35.3855,
+   "recent_average": 27.9074,
+   "trend": 29.4536,
+   "seasonal": 33.0914,
+   "lightgbm": 30.4744
+  }
+ },
+ "health_care.main.fact_claim_payment.sum.paid_amount": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.102,
+  "mae": {
+   "last_value": 178728.7771,
+   "recent_average": 162959.1509,
+   "trend": 170985.6674,
+   "seasonal": 168651.5914,
+   "lightgbm": 160417.2271
+  }
+ },
+ "health_care.main.fact_encounter.count": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.112,
+  "mae": {
+   "last_value": 21.9126,
+   "recent_average": 19.4477,
+   "trend": 22.4996,
+   "seasonal": 32.4443,
+   "lightgbm": 20.4996
+  }
+ },
+ "health_care.core_admin.provider.active": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 4.491,
+   "recent_average": 6.6736,
+   "trend": 5.3168,
+   "seasonal": 4.8122,
+   "lightgbm": 5.6679
+  }
+ },
+ "health_care.main.member_eligibility.active": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.17,
+  "mae": {
+   "last_value": 24.9067,
+   "recent_average": 23.5406,
+   "trend": 29.363,
+   "seasonal": 23.009,
+   "lightgbm": 20.6755
+  }
+ },
+ "health_care.main.medical_claim_header.count": {
+  "method": "trend",
+  "skill_vs_naive": 0.143,
+  "mae": {
+   "last_value": 32.8651,
+   "recent_average": 28.4945,
+   "trend": 28.1655,
+   "seasonal": 43.9424,
+   "lightgbm": 36.4195
+  }
+ },
+ "health_care.main.medical_claim_header.sum.total_plan_paid_amount": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.111,
+  "mae": {
+   "last_value": 81886.6422,
+   "recent_average": 75708.5245,
+   "trend": 89239.3722,
+   "seasonal": 85986.8071,
+   "lightgbm": 72763.308
+  }
+ },
+ "health_care.main.medical_claim_header.sum.cob_primary_paid_amount": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.211,
+  "mae": {
+   "last_value": 1197.7958,
+   "recent_average": 944.4835,
+   "trend": 961.689,
+   "seasonal": 1386.0559,
+   "lightgbm": 1054.0455
+  }
+ },
+ "health_care.main.medical_claim_header.sum.total_allowed_amount": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.05,
+  "mae": {
+   "last_value": 88797.6829,
+   "recent_average": 84321.9455,
+   "trend": 107469.9162,
+   "seasonal": 101563.5719,
+   "lightgbm": 90801.1724
+  }
+ },
+ "health_care.main.medical_claim_header.sum.total_billed_amount": {
+  "method": "lightgbm",
+  "skill_vs_naive": 0.184,
+  "mae": {
+   "last_value": 201665.1923,
+   "recent_average": 178188.1662,
+   "trend": 224178.8509,
+   "seasonal": 234637.8943,
+   "lightgbm": 164521.5397
+  }
+ },
+ "health_care.main.medical_claim_header.sum.total_member_responsibility_amount": {
+  "method": "seasonal",
+  "skill_vs_naive": 0.126,
+  "mae": {
+   "last_value": 17314.821,
+   "recent_average": 17421.1323,
+   "trend": 27132.4688,
+   "seasonal": 15126.288,
+   "lightgbm": 18934.7667
+  }
+ },
+ "health_care.main.pharmacy_claim.count": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.039,
+  "mae": {
+   "last_value": 47.9408,
+   "recent_average": 46.0493,
+   "trend": 57.409,
+   "seasonal": 53.011,
+   "lightgbm": 55.6167
+  }
+ },
+ "health_care.main.pharmacy_claim.sum.plan_paid_amount": {
+  "method": "trend",
+  "skill_vs_naive": 0.207,
+  "mae": {
+   "last_value": 34379.1349,
+   "recent_average": 27923.1818,
+   "trend": 27274.7025,
+   "seasonal": 39337.3266,
+   "lightgbm": 33449.9887
+  }
+ },
+ "health_care.main.pharmacy_claim.sum.allowed_amount": {
+  "method": "trend",
+  "skill_vs_naive": 0.213,
+  "mae": {
+   "last_value": 45551.2377,
+   "recent_average": 36826.3932,
+   "trend": 35837.8806,
+   "seasonal": 49522.9849,
+   "lightgbm": 44607.9844
+  }
+ },
+ "health_care.main.pharmacy_claim.sum.billed_amount": {
+  "method": "trend",
+  "skill_vs_naive": 0.242,
+  "mae": {
+   "last_value": 58483.9426,
+   "recent_average": 46268.8416,
+   "trend": 44302.4551,
+   "seasonal": 67025.9663,
+   "lightgbm": 54945.7428
+  }
+ },
+ "health_care.main.pharmacy_claim.sum.ingredient_cost_amount": {
+  "method": "trend",
+  "skill_vs_naive": 0.213,
+  "mae": {
+   "last_value": 45257.5889,
+   "recent_average": 36419.1475,
+   "trend": 35629.3412,
+   "seasonal": 50218.7257,
+   "lightgbm": 43140.9782
+  }
+ },
+ "health_care.main.pharmacy_claim.sum.dispensing_fee_amount": {
+  "method": "recent_average",
+  "skill_vs_naive": 0.07,
+  "mae": {
+   "last_value": 207.9301,
+   "recent_average": 193.3332,
+   "trend": 216.3768,
+   "seasonal": 221.812,
+   "lightgbm": 213.2987
+  }
+ },
+ "health_care.main.fact_member_month.sum.member_month_count": {
+  "method": "last_value",
+  "skill_vs_naive": 0.0,
+  "mae": {
+   "last_value": 29.4387,
+   "recent_average": 44.963,
+   "trend": 29.6493,
+   "seasonal": 31.0114
+  }
+ }
+}

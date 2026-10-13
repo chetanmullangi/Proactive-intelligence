@@ -19,7 +19,7 @@ export const flags = [
     title: 'Claim-level and line-level payment totals don\'t always match',
     severity: 'High',
     reason:
-      'For about 2.1% of claims (2,103 of 99,271), the total payment recorded for the whole claim doesn\'t match the sum of its individual line-item payments. On the single worst claim, that gap is over $108,000. Until this is reconciled, we can\'t be fully certain which figure — the claim total or the line total — is the accurate one for those claims.',
+      'For about 2.1% of claims (2,103 of 99,271), the total payment recorded for the whole claim doesn\'t match the sum of its individual line-item payments. On the single worst claim, that gap is over $108,000. The share of mismatched claims has held steady since 2020, so this is a long-standing gap, not a new one. Until it is reconciled, we can\'t be fully certain which figure — the claim total or the line total — is the accurate one for those claims.',
     relatedKpiIds: ['header-paid', 'line-paid'],
   },
   {
@@ -31,12 +31,20 @@ export const flags = [
     relatedKpiIds: ['header-billed', 'header-allowed', 'header-paid'],
   },
   {
-    id: 'stale-vs-fresh-data',
-    title: 'Most of this dashboard is about 2 months older than the claims-payment numbers',
+    id: 'claims-feed-stopped',
+    title: 'No claims for visits after 30 June have arrived — and that is what is driving the payment drop',
+    severity: 'High',
+    reason:
+      'The newest claim in the data is for a visit on 30 June. Pharmacy data stops on 3 July, and premium, member-month and enrollment data stop in June. Payment data runs to the 1 September payment run, but every payment made since July has been for a visit on or before 30 June. So the weekly payment runs are working through the last claims that came in, and fewer are left each week (1,131 payments in July, 556 in August, 58 in the 1 September run). The loading log shows the last successful load on 4 September, even though loads are scheduled daily. Until new claims arrive, payments will keep falling and most of this dashboard will keep showing June.',
+    relatedKpiIds: ['payment-count', 'payment-amount', 'header-count', 'header-paid', 'pharmacy-count', 'eligibility-records'],
+  },
+  {
+    id: 'future-submission-dates',
+    title: '97 claims are dated as submitted in the future',
     severity: 'Medium',
     reason:
-      'Claim volume, billed/allowed/paid amounts, denials, encounters, and pharmacy figures all reflect data through late June. The claims-payment numbers (Claim Payments Disbursed) are current through late August. Comparing "today\'s" payment decline against two-month-old claim volume could make the two look more — or less — connected than they really are, until the older data refreshes.',
-    relatedKpiIds: ['payment-count', 'payment-amount'],
+      '97 claims (about 0.1% of 99,271) have a submission date after today, from 27 September 2026 to as late as April 2027. A claim can\'t be submitted before it happens in real time, so these dates are wrong at the source. None of the dashboard measures count claims by submission date, so the numbers here aren\'t affected. But anything that relies on when a claim was submitted, such as how long claims take to be paid or the proactive risk models, should exclude or correct these first.',
+    relatedKpiIds: ['header-count', 'denial-rate'],
   },
 ]
 

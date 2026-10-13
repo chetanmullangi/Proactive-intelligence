@@ -1,0 +1,63 @@
+# Proactive Intelligence engine settings. Nothing here names a table or a KPI: the engine discovers those.
+# Business judgement the engine can't infer (names, departments, corrections) lives in semantic_overrides.yaml,
+# which the profiler agent maintains.
+
+database: HEALTH_CARE
+connection: tst                      # %LOCALAPPDATA%/snowflake/config.toml; override with PI_SNOWFLAKE_CONNECTION
+results_schema: ANALYTICS            # created by `python -m pi setup`; the only place the engine writes
+query_tag: proactive-intelligence
+
+# Schemas the engine must never read. The simulator's control, governance and backup schemas hold the answer key
+# (injected events, human errors, lineage) used only to grade the engine, so reading them would be cheating.
+exclude_schemas: [INFORMATION_SCHEMA, ANALYTICS, SIMULATION_CONTROL, DATA_GOVERNANCE, "*_PRE_SIMULATION", PUBLIC]
+exclude_tables: ["TMP_*", "STG_*", "*_BACKUP"]
+
+# "Today" for the analysis: yesterday, so a day still loading is never judged.
+as_of_offset_days: 1
+
+incremental:
+  restate_days_default: 180          # re-aggregate this trailing window daily; raised to the measured 99th-percentile
+  restate_days_max: 400              #   arrival lag (+ margin) per table, never above max
+  reconcile_every_days: 7            # full totals check against the raw table; mismatch -> rebuild that table
+  breakdown_history_days: 760        # dimension breakdowns kept for ~2 years (enough for same-period-last-year)
+
+catalog:
+  category_max_distinct: 40          # text columns with 2..N values are business dimensions
+  status_max_distinct: 15
+  top_values: 12
+
+kpis:
+  max_money_per_table: 5
+  max_rates_per_status: 4
+  min_rate_share: 0.003              # a status value must cover at least this share of rows to become a rate KPI
+  max_dims_per_table: 6
+  max_joined_dims: 4
+
+analysis:
+  baseline_periods: 104              # weeks of history behind the robust baseline
+  min_history_periods: 16
+  watch_z: 2.5
+  attention_z: 3.5
+  min_completeness: 0.8              # below this share of expected arrivals a period is "too early to judge"
+  min_change:                        # statistically unusual but too small to matter -> stays normal
+    relative: 0.02                   #   2% for counts and amounts
+    level: 0.01                      #   1% for in-force levels (active members, providers)
+    rate_points: 0.005               #   half a percentage point for shares
+
+relations:
+  max_lag_weeks: 8
+  min_overlap: 52                    # weeks; below this a correlation is never evidence
+  min_abs_r: 0.25
+  max_path_hops: 3                   # a KPI pair needs a business pathway (lineage / key / process) within N hops
+
+forecast:
+  horizon_weeks: 26
+  backtest_origins: 26
+
+external_signals:                    # public sources the detector agent checks for real-world causes (WebSearch/WebFetch)
+  - {name: FDA drug shortages, url: "https://www.accessdata.fda.gov/scripts/drugshortages/", matches: [pharmacy, drug]}
+  - {name: CDC respiratory illness activity, url: "https://www.cdc.gov/respiratory-viruses/data/activity-levels.html", matches: [encounter, urgent, emergency, respiratory]}
+  - {name: FEMA disaster declarations, url: "https://www.fema.gov/disaster/declarations", matches: [state, region, weather]}
+  - {name: NOAA severe weather, url: "https://www.weather.gov/", matches: [state, region, weather]}
+  - {name: CMS newsroom and rules, url: "https://www.cms.gov/newsroom", matches: [denial, authorization, appeal, policy]}
+  - {name: BLS employment news, url: "https://www.bls.gov/bls/newsrels.htm", matches: [group, enrollment, membership]}

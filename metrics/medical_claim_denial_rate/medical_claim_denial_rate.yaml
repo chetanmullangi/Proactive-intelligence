@@ -1,20 +1,37 @@
 metric_batch: medical_claim_denial_rate
+metric_name: "main.medical_claim_header.avg_is_denied"
+plain_name: "Claim Denial Rate"
 db: snowflake
 ingest_sql: metrics/medical_claim_denial_rate/medical_claim_denial_rate.sql
+grain: week                     # latest complete week only — partial periods are never ingested
 ingest_cron: "0 6 * * 1"
 train_cron: "0 7 * * 1"
 score_cron: "0 8 * * 1"
 alert_cron: "0 8 * * 1"
-forecast_horizon: 4
+forecast_horizon: 4           # weeks ahead
 thresholds:
-  warn_lower: 0.063089
-  warn_upper: 0.187551
-  crit_lower: 0.052716
-  crit_upper: 0.197923
-directionality: high_bad
-kpi_class: error_rate
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2026-06-22"
+  expected_value: 0.1195
+  warn_lower: 0.0767
+  warn_upper: 0.1624
+  crit_lower: 0.0696
+  crit_upper: 0.1695
+  residual_scale: 0.0143      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: -0.035
+  seasonality_removed: false
+  reference_buckets: 104
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.medical_claim_header.avg_is_denied baseline_sql"
+directionality: high_bad          # inferred by the detector — confirm with the business owner
+kpi_class: "error_rate"
+status_at_generation: "normal"
+signals_agreeing: ""
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:41.156Z"
 notes: >
-  Always-watch KPI (kpi_class=error_rate) regardless of threshold status.
-  Flat week-to-week and month-to-month, but a real, non-seasonal upward creep
-  year-over-year (year r2=0.83) — worth a standing dashboard watch even though
-  native-grain bounds aren't currently tripped.
+  See reports/HEALTH_CARE/anomaly_report.md.

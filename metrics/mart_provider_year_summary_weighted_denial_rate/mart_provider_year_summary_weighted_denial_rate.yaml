@@ -1,0 +1,37 @@
+metric_batch: mart_provider_year_summary_weighted_denial_rate
+metric_name: "main.mart_provider_year_summary.weighted_denial_rate"
+plain_name: "Provider Network Denial Rate"
+db: snowflake
+ingest_sql: metrics/mart_provider_year_summary_weighted_denial_rate/mart_provider_year_summary_weighted_denial_rate.sql
+grain: year                     # latest complete year only — partial periods are never ingested
+ingest_cron: "0 6 15 1 *"
+train_cron: "0 7 15 1 *"
+score_cron: "0 8 15 1 *"
+alert_cron: "0 8 15 1 *"
+forecast_horizon: 1           # years ahead
+thresholds:
+  method: residual_robust_z       # out-of-sample: tested bucket vs up to 104 prior buckets, trend/seasonality removed first
+  as_of_bucket: "2025-01-01"
+  expected_value: 0.1135
+  warn_lower: 0.0962
+  warn_upper: 0.1308
+  crit_lower: 0.0933
+  crit_upper: 0.1337
+  residual_scale: 0.0058      # band = expected ± 3.0 (warn) / 3.5 (crit) × this
+  warn_z: 3.0
+  crit_z: 3.5
+  trend_removed: false
+  reference_slope_pct_per_bucket: 2.69
+  seasonality_removed: false
+  reference_buckets: 5
+  # The bounds above are for as_of_bucket. When trend or seasonality was removed the expected value moves
+  # each period — re-centre by re-running the baseline instead of reusing these numbers indefinitely:
+  refresh: "node tools/render_kpi_sql.mjs reports/HEALTH_CARE/kpi_manifest.json --print main.mart_provider_year_summary.weighted_denial_rate baseline_sql"
+directionality: high_bad          # inferred by the detector — confirm with the business owner
+kpi_class: "error_rate"
+status_at_generation: "normal"
+signals_agreeing: "none"
+source_run_ts: "2026-09-24 07:15:16.636"
+generated_at: "2026-09-25T11:52:41.264Z"
+notes: >
+  See reports/HEALTH_CARE/anomaly_report.md.

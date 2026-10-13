@@ -18,24 +18,24 @@
   "target_id": "payment_count_h1",
   "task": "regression",
   "metrics": {
-    "mae": 22.384278074810894,
-    "r2": 0.09894258436191694
+    "mae": 23.048112793182433,
+    "r2": 0.07220587362527886
   },
   "feature_importance": {
     "diff_lag_1": 42.0,
-    "diff_lag_6": 33.0,
-    "vs_roll_mean_12": 26.0,
+    "diff_lag_6": 36.0,
+    "vs_roll_mean_12": 27.0,
+    "diff_lag_5": 24.0,
     "week_of_year": 24.0,
-    "diff_lag_5": 23.0,
-    "roll_std_4": 20.0,
-    "vs_roll_mean_4": 18.0,
+    "roll_std_4": 21.0,
+    "vs_roll_mean_4": 21.0,
+    "diff_lag_8": 17.0,
     "diff_lag_2": 16.0,
-    "diff_lag_8": 14.0,
-    "diff_lag_3": 12.0,
-    "diff_lag_7": 11.0,
-    "diff_lag_4": 7.0,
+    "diff_lag_3": 15.0,
+    "diff_lag_7": 13.0,
+    "diff_lag_4": 8.0,
     "month": 5.0
   },
-  "trained_at": "2026-09-14T10:49:33.607555+00:00",
+  "trained_at": "2026-09-24T14:20:25.674174+00:00",
   "lightgbm_version": "4.7.0"
 }

@@ -18,8 +18,8 @@
   "target_id": "payment_amount_h2",
   "task": "regression",
   "metrics": {
-    "mae": 104124.51360858169,
-    "r2": -0.025539835444047032
+    "mae": 106858.49203324581,
+    "r2": -0.07331444905706586
   },
   "feature_importance": {
     "diff_lag_1": 0.0,
@@ -36,6 +36,6 @@
     "month": 0.0,
     "week_of_year": 0.0
   },
-  "trained_at": "2026-09-14T10:49:35.627459+00:00",
+  "trained_at": "2026-09-24T14:20:28.844985+00:00",
   "lightgbm_version": "4.7.0"
 }

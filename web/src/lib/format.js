@@ -33,11 +33,16 @@ export function bandStatus(kpi) {
 }
 
 export function pctFromBaseline(kpi) {
-  // rough percentile-ish read using median/mad, purely for a small UI label
-  const { median, mad } = kpi.baseline
-  if (!mad) return null
-  const z = (kpi.value - median) / (1.4826 * mad)
-  return z
+  // Out-of-sample robust z persisted by the detector (tested period vs. its prior periods, trend removed).
+  return kpi.baseline?.robustZ ?? null
+}
+
+// "+34%", "−4.5%": whole numbers once a change is 10% or more.
+export function pctChange(v) {
+  if (v === undefined || v === null || Number.isNaN(Number(v))) return '—'
+  const n = Number(v)
+  const s = Math.abs(n) >= 10 ? Math.round(Math.abs(n)).toString() : Math.abs(n).toFixed(1)
+  return (n > 0 ? '+' : n < 0 ? '−' : '') + s + '%'
 }
 
 export function path(pts, xf, yf, i0 = 0) {
